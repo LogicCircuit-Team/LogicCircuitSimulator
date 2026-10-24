@@ -1,35 +1,117 @@
 ﻿@using LogicCore.Management
-@using LogicCore.Interfaces
 @using LogicCore.Gates
 
-<div class="d-flex flex-wrap gap-2 p-1">
-    <button class="btn btn-primary" @onclick='() => Add(new AndGate())'>AND</button>
-    <button class="btn btn-primary" @onclick='() => Add(new ORGate())'>OR</button>
-    <button class="btn btn-primary" @onclick='() => Add(new NotGate())'>NOT</button>
-    <button class="btn btn-primary" @onclick='() => Add(new NANDGate())'>NAND</button>
-    <button class="btn btn-primary" @onclick='() => Add(new NOR())'>NOR</button>
-    <button class="btn btn-primary" @onclick='() => Add(new XORGate())'>XOR</button>
-    <button class="btn btn-success" @onclick='() => Add(new Switch())'>SWITCH</button>
-    <button class="btn btn-success" @onclick='() => Add(new Lamp())'>LAMP</button>
-    <button class="btn btn-danger" @onclick="Clear">Clear</button>
+<div class="sidebar-tools p-2">
+    <div class="d-flex flex-column gap-2">
+        <div class="text-muted fw-bold mb-1" style="font-size: 12px;">المداخل والمخارج</div>
+        <button class="btn btn-outline-primary btn-sm text-start" @onclick="AddSwitchAsync">
+            🔌 + SWITCH (مفتاح)
+        </button>
+        <button class="btn btn-outline-warning btn-sm text-start" @onclick="AddLampAsync">
+            💡 + LAMP (مصباح)
+        </button>
+
+        <div class="text-muted fw-bold mt-2 mb-1" style="font-size: 12px;">البوابات الأساسية</div>
+        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddAndAsync">
+            ➕ AND
+        </button>
+        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddOrAsync">
+            ➕ OR
+        </button>
+        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddNotAsync">
+            ➕ NOT
+        </button>
+
+        <div class="text-muted fw-bold mt-2 mb-1" style="font-size: 12px;">البوابات المركبة</div>
+        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddNandAsync">
+            ➕ NAND
+        </button>
+        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddNorAsync">
+            ➕ NOR
+        </button>
+        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddXorAsync">
+            ➕ XOR
+        </button>
+
+        <hr class="my-2" />
+
+        <button class="btn btn-danger btn-sm w-100" @onclick="ClearBoardAsync">
+            🗑️ مسح اللوحة (Clear)
+        </button>
+    </div>
 </div>
 
 @code {
     [Parameter] public CircuitManager Manager { get; set; } = default!;
     [Parameter] public EventCallback OnCircuitChanged { get; set; }
 
-    private async Task Add(IGate gate)
+    // حساب موضع متتالي لمنع تكدس البوابات فوق بعضها عند الإضافة
+    private (double X, double Y) GetNextPosition()
     {
-        // حساب موضع جديد متسلسل لكل بوابة مضافة
-        int count = Manager.Gates.Count;
-        gate.X = 70 + (count % 4) * 160;
-        gate.Y = 50 + (count / 4) * 110;
+        int count = Manager?.Gates.Count ?? 0;
+        double x = 60 + ((count % 4) * 160);
+        double y = 60 + ((count / 4) * 110);
+        return (x, y);
+    }
 
-        Manager.AddGate(gate);
+    private async Task AddSwitchAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new Switch { X = pos.X, Y = pos.Y });
         await OnCircuitChanged.InvokeAsync();
     }
 
-    private async Task Clear()
+    private async Task AddLampAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new Lamp { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task AddAndAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new AndGate { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task AddOrAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new ORGate { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task AddNotAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new NotGate { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task AddNandAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new NANDGate { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task AddNorAsync()
+    {
+        var pos = GetNextPosition();
+        // الاسم المسجل في النواة هو NOR وليس NORGate
+        Manager.AddGate(new NOR { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task AddXorAsync()
+    {
+        var pos = GetNextPosition();
+        Manager.AddGate(new XORGate { X = pos.X, Y = pos.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+    private async Task ClearBoardAsync()
     {
         Manager.Clear();
         await OnCircuitChanged.InvokeAsync();

@@ -79,6 +79,7 @@
     private readonly CircuitManager sharedManager = new();
     private CanvasBoard? canvasBoard;
     private AnalysisPanel? analysisPanel;
+
     private async Task RefreshAll()
     {
         if (canvasBoard is not null)
@@ -87,8 +88,6 @@
         }
 
         RefreshAnalysis();
-
-        await InvokeAsync(StateHasChanged);
     }
 
     private void RefreshAnalysis()

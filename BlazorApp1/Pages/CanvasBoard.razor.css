@@ -1,0 +1,227 @@
+﻿
+.canvas-board-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    min-height: 580px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    user-select: none;
+}
+
+.board-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+    z-index: 5;
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.btn-tool {
+    padding: 7px 10px;
+    font-size: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1e293b;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+    .btn-tool:hover:not(:disabled) {
+        background: #e2e8f0;
+        border-color: #94a3b8;
+    }
+
+    .btn-tool:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .btn-tool.active-mode {
+        background: #2563eb;
+        color: #ffffff;
+        border-color: #1d4ed8;
+    }
+
+.btn-danger-outline {
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+    .btn-danger-outline:hover:not(:disabled) {
+        background: #fef2f2;
+    }
+
+.btn-danger-solid {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #f87171;
+}
+
+    .btn-danger-solid:hover:not(:disabled) {
+        background: #fecaca;
+    }
+
+.btn-edu {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+    font-weight: 600;
+}
+
+.btn-step {
+    background: #16a34a;
+    color: #ffffff;
+    border-color: #15803d;
+    font-weight: 600;
+}
+
+    .btn-step:hover:not(:disabled) {
+        background: #15803d;
+    }
+
+.btn-exit-edu {
+    background: #f59e0b;
+    color: #ffffff;
+    border-color: #d97706;
+}
+
+.status-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 36px;
+}
+
+.status-normal {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.status-error {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #f87171;
+    font-weight: 600;
+}
+
+.status-edu {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.validation-alert {
+    display: inline-block;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.canvas-viewport {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 540px;
+    min-height: 420px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    touch-action: none;
+    user-select: none;
+}
+
+    .canvas-viewport canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        user-select: none;
+    }
+
+.educational-panel {
+    border: 1px solid #93c5fd;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    color: #1e293b;
+}
+
+.edu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #1e3a8a;
+}
+
+.badge-stable {
+    background: #dcfce7;
+    color: #15803d;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .canvas-board-wrapper {
+        min-height: 500px;
+    }
+
+    .board-toolbar {
+        align-items: flex-start;
+        padding: 8px;
+    }
+
+    .tool-group {
+        gap: 5px;
+    }
+
+    .btn-tool {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .canvas-viewport {
+        height: 500px;
+        min-height: 400px;
+    }
+
+    .status-banner {
+        align-items: flex-start;
+    }
+}

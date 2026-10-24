@@ -1,268 +1,1644 @@
-﻿@using LogicCore.Management
-@using LogicCore.Connections
-@using LogicCore.Interfaces
-@using LogicCore.Gates
+@using System
+@using System.Linq
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
 @using Excubo.Blazor.Canvas
 @using Excubo.Blazor.Canvas.Contexts
-@using BlazorApp1.Drawing
+@using LogicCore.Management
+@using LogicCore.Interfaces
+@using LogicCore.Connections
+@using LogicCore.Gates
+@using LogicCore.Simulation
+@using LogicCore.Validation
 
-<div style="position: relative; width: 800px; height: 500px; user-select: none;">
-    @* لوحة الرسم *@
-    <Canvas @ref="_canvas"
-            width="800"
-            height="500"
-            style="background-color: #f0f0f0; border: 2px solid #333; display: block;" />
+@inject IJSRuntime JS
 
-    @* طبقة تفاعلية شفافة لالتقاط الماوس فوراً دون أي مشاكل *@
-    <div style="position: absolute; top: 0; left: 0; width: 800px; height: 500px; cursor: @(_isDragging ? "grabbing" : "default"); z-index: 10;"
-         @onmousedown="OnMouseDown"
-         @onmousemove="OnMouseMove"
-         @onmouseup="OnMouseUp">
+<div class="canvas-board-wrapper">
+    <div class="board-toolbar">
+        <div class="tool-group">
+            <button class="btn-tool" title="تكبير" @onclick="ZoomInAsync">🔍 +</button>
+            <button class="btn-tool" title="تصغير" @onclick="ZoomOutAsync">🔍 −</button>
+            <button class="btn-tool" title="إعادة ضبط العرض" @onclick="ResetViewAsync">
+                @($"{_zoom * 100:0}%")
+            </button>
+        </div>
+
+        <div class="tool-group">
+            <button class="btn-tool @(_isPanMode ? "active-mode" : "")"
+                    @onclick="TogglePanMode">
+                ✋ تحريك اللوحة
+            </button>
+
+            <button class="btn-tool btn-danger-outline"
+                    @onclick="DeleteSelectedAsync"
+                    disabled="@(_selectedGate == null && _selectedWire == null)">
+                🗑️ حذف المحدد
+            </button>
+
+            <button class="btn-tool btn-danger-solid" @onclick="ClearBoardAsync">
+                🧹 مسح الكل
+            </button>
+        </div>
+
+        <div class="tool-group">
+            @if (!_isEducationalMode)
+            {
+                <button class="btn-tool btn-edu" @onclick="StartEducationalModeAsync">
+                    🎓 الوضع التعليمي
+                </button>
+            }
+            else
+            {
+                <button class="btn-tool btn-step" @onclick="ExecuteNextStepAsync">
+                    ⏭️ الخطوة التالية (@(_stepSimulator?.StepCount ?? 0))
+                </button>
+
+                <button class="btn-tool" @onclick="ResetEducationalAsync">
+                    🔄 تصفير الخطوات
+                </button>
+
+                <button class="btn-tool btn-exit-edu" @onclick="ExitEducationalModeAsync">
+                    ⚡ تشغيل كامل
+                </button>
+            }
+        </div>
     </div>
+
+    <div class="status-banner @GetStatusCssClass()">
+        <span>@_statusMessage</span>
+
+        @if (!string.IsNullOrWhiteSpace(_validationMessage))
+        {
+            <span class="validation-alert">@_validationMessage</span>
+        }
+
+        @if (Manager?.HasFeedbackLoop == true)
+        {
+            <span class="validation-alert">⚠️ توجد حلقة راجعة في الدارة</span>
+        }
+    </div>
+
+    <div class="canvas-viewport"
+         id="@_viewportId"
+         @onmouseenter="MeasureViewportAsync"
+         @onwheel="HandleWheelAsync"
+         @onwheel:preventDefault="true"
+         @oncontextmenu:preventDefault="true">
+
+        <Canvas @ref="_canvasRef"
+                width="@_canvasWidth"
+                height="@_canvasHeight"
+                @onmousedown="HandleMouseDownAsync"
+                @onmousemove="HandleMouseMoveAsync"
+                @onmouseup="HandleMouseUpAsync"
+                @onmouseleave="HandleMouseLeaveAsync"
+                style="@($"width:100%;height:100%;display:block;cursor:{GetCursorStyle()};touch-action:none;user-select:none;")" />
+    </div>
+
+    @if (_isEducationalMode && _stepSimulator != null)
+    {
+        <div class="educational-panel">
+            <div class="edu-header">
+                <strong>@_stepSimulator.LastActionDescription</strong>
+                <span class="badge-stable">الخطوة @_stepSimulator.StepCount</span>
+            </div>
+
+            <div>مرحلة المحاكاة: @_stepSimulator.CurrentStage</div>
+        </div>
+    }
 </div>
 
 @code {
-    private Canvas? _canvas;
+    [Parameter]
+    public CircuitManager Manager { get; set; } = default!;
 
-    [Parameter] public CircuitManager Manager { get; set; } = default!;
-    [Parameter] public EventCallback OnBoardUpdated { get; set; }
+    [Parameter]
+    public EventCallback OnBoardUpdated { get; set; }
 
-    // التحكم بالتحريك
+    // ───────────────────────── الحالة العامة ─────────────────────────
+
+    private Canvas? _canvasRef;
+    private readonly string _viewportId = "cv-" + Guid.NewGuid().ToString("N");
+
+    private int _canvasWidth = 1200;
+    private int _canvasHeight = 700;
+    private bool _redrawAfterRender;
+    private bool _refreshCircuitAfterRender;
+    private CircuitManager? _observedManager;
+
+    // ثوابت الهندسة (بوحدات الدارة)
+    private const double GridSize = 20;
+    private const double GateWidth = 110;       // صندوق منطقي غير مرئي للالتقاط فقط
+    private const double GateHeight = 68;
+    private const double BodyLeft = 30;         // بداية جسم الرمز من يسار البوابة
+    private const double BodyRight = 80;        // نهاية جسم الرمز (مع فقاعة العكس)
+    private const double BodyHeight = 40;
+    private const double BubbleRadius = 4;
+    private const double PinDotRadius = 4;
+    private const double OrCurve = 12;          // عمق انحناء الحافة اليسرى لبوابات OR
+
+    // مناطق الالتقاط بالبكسل على الشاشة (تتحول لوحدات الدارة بالقسمة على Zoom)
+    private const double PinPickRadiusPx = 10;  // الضغط على المنفذ لبدء/حذف
+    private const double SnapRadiusPx = 18;     // الجذب المغناطيسي أثناء سحب السلك
+
+    private double _zoom = 1;
+    private double _panX;
+    private double _panY;
+
+    private bool _isPanMode;
+    private bool _isPanning;
+    private double _panStartMouseX;
+    private double _panStartMouseY;
+
     private IGate? _selectedGate;
-    private bool _isDragging = false;
+    private Wire? _selectedWire;
+
+    private IGate? _draggingGate;
+    private bool _hasMovedGate;
     private double _dragOffsetX;
     private double _dragOffsetY;
 
-    // التحكم بمد الأسلاك
-    private IGate? _wiringSource;
-    private double _mouseX;
-    private double _mouseY;
+    private IGate? _wiringSourceGate;
+    private bool _isDrawingTempWire;
+    private double _tempWireEndX;
+    private double _tempWireEndY;
+
+    private IGate? _hoverInputGate;
+    private int _hoverInputIndex = -1;
+    private bool _hoverInputValid;
+
+    private bool _isEducationalMode;
+    private StepSimulator? _stepSimulator;
+
+    private string? _validationMessage;
+
+    private string _statusMessage =
+        "اسحب من مخرج البوابة إلى مدخل بوابة أخرى للتوصيل. انقر على SWITCH لتغيير حالته.";
+
+    private bool _isErrorStatus;
+
+    // منع تكدس الإطارات
+    private bool _isRendering;
+    private bool _renderPending;
+
+    // المداخل المشغولة (تُحسب مرة لكل إطار أثناء السحب)
+    private HashSet<(IGate, int)> _occupiedInputs = new();
+
+    // ───────────────────────── دورة الحياة والرسم المجدول ─────────────────────────
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_observedManager, Manager))
+        {
+            _observedManager = Manager;
+            ResetInteractionState();
+            _refreshCircuitAfterRender = true;
+            _redrawAfterRender = true;
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await RedrawAsync();
+        if (firstRender)
+        {
+            await MeasureViewportAsync();
+        }
+
+        if (_refreshCircuitAfterRender && Manager != null)
+        {
+            _refreshCircuitAfterRender = false;
+            _redrawAfterRender = false;
+            await SimulateAndRefreshAsync();
+        }
+        else if ((firstRender || _redrawAfterRender) && Manager != null)
+        {
+            _redrawAfterRender = false;
+            await RequestDrawAsync();
+        }
     }
 
-    public async Task RedrawAsync()
+    // مطابقة دقة الكانفاس مع حجمه الفعلي في الصفحة حتى لا ينحرف التقاط الفأرة.
+    private async Task MeasureViewportAsync()
     {
-        if (_canvas is null) return;
-
         try
         {
-            await using var ctx = await _canvas.GetContext2DAsync();
-            await using (var batch = ctx.CreateBatch())
+            var size = await JS.InvokeAsync<double[]>(
+                "eval",
+                $"(function(){{var e=document.getElementById('{_viewportId}');" +
+                "if(!e)return [0,0];return [e.clientWidth,e.clientHeight];})()");
+
+            if (size == null || size.Length < 2)
+                return;
+
+            int w = (int)Math.Round(size[0]);
+            int h = (int)Math.Round(size[1]);
+
+            if (w > 50 && h > 50 && (w != _canvasWidth || h != _canvasHeight))
             {
-                dynamic d = batch;
-                await batch.ClearRectAsync(0, 0, 800, 500);
-
-                // 1. رسم شبكة خلفية خفيفة (Grid) كما طلبت الوثيقة
-                await d.StrokeStyleAsync("#E0E0E0");
-                await d.LineWidthAsync(1);
-                for (int x = 0; x < 800; x += 25)
-                {
-                    await d.BeginPathAsync();
-                    await d.MoveToAsync(x, 0);
-                    await d.LineToAsync(x, 500);
-                    await d.StrokeAsync();
-                }
-                for (int y = 0; y < 500; y += 25)
-                {
-                    await d.BeginPathAsync();
-                    await d.MoveToAsync(0, y);
-                    await d.LineToAsync(800, y);
-                    await d.StrokeAsync();
-                }
-
-                // 2. رسم الأسلاك
-                foreach (var wire in Manager.Wires)
-                {
-                    var start = GetOutputPoint(wire.SourceGate);
-                    var end = GetInputPoint(wire.TargetGate, wire.TargetInputIndex);
-
-                    await d.StrokeStyleAsync(wire.SourceGate.Output ? "#00AA44" : "#555555");
-                    await d.LineWidthAsync(3);
-                    await d.BeginPathAsync();
-                    await d.MoveToAsync(start.X, start.Y);
-                    await d.LineToAsync(end.X, end.Y);
-                    await d.StrokeAsync();
-                }
-
-                // سلك التوصيل أثناء السحب
-                if (_wiringSource != null)
-                {
-                    var start = GetOutputPoint(_wiringSource);
-                    await d.StrokeStyleAsync("#FF8800");
-                    await d.LineWidthAsync(2);
-                    await d.BeginPathAsync();
-                    await d.MoveToAsync(start.X, start.Y);
-                    await d.LineToAsync(_mouseX, _mouseY);
-                    await d.StrokeAsync();
-                }
-
-                // 3. رسم البوابات
-                foreach (var gate in Manager.Gates)
-                {
-                    await GateRenderer.DrawAsync(batch, gate);
-
-                    // نقطة المخرج (أزرق)
-                    if (gate.GateType.ToUpperInvariant() != "LAMP")
-                    {
-                        var outPt = GetOutputPoint(gate);
-                        await d.FillStyleAsync("#007ACC");
-                        await d.BeginPathAsync();
-                        await d.ArcAsync(outPt.X, outPt.Y, 5, 0, Math.PI * 2);
-                        await d.FillAsync();
-                    }
-
-                    // نقاط المداخل (أحمر)
-                    for (int i = 0; i < (gate.Inputs?.Length ?? 0); i++)
-                    {
-                        var inPt = GetInputPoint(gate, i);
-                        await d.FillStyleAsync("#CC3300");
-                        await d.BeginPathAsync();
-                        await d.ArcAsync(inPt.X, inPt.Y, 5, 0, Math.PI * 2);
-                        await d.FillAsync();
-                    }
-                }
+                _canvasWidth = w;
+                _canvasHeight = h;
+                _redrawAfterRender = true;
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch
         {
-            // منع استثناءات التزامن عند الرسم السريع
+            // في حال تعذر JS نبقى على الأبعاد الافتراضية.
         }
     }
 
-    private async Task OnMouseDown(MouseEventArgs e)
+    /// <summary>
+    /// يطلب رسم إطار. إذا كان إطار قيد التنفيذ يُسجَّل الطلب ويُنفَّذ إطار واحد
+    /// فقط بعد انتهاء الحالي (بدون تكديس عمليات غير متزامنة).
+    /// </summary>
+    private async Task RequestDrawAsync()
     {
-        double mx = e.OffsetX;
-        double my = e.OffsetY;
-
-        // أ) هل نقر على مخرج للبدء بسلك؟
-        foreach (var gate in Manager.Gates)
+        if (_isRendering)
         {
-            if (gate.GateType.ToUpperInvariant() == "LAMP") continue;
-
-            var outPt = GetOutputPoint(gate);
-            if (Math.Abs(mx - outPt.X) <= 12 && Math.Abs(my - outPt.Y) <= 12)
-            {
-                _wiringSource = gate;
-                _mouseX = mx;
-                _mouseY = my;
-                await RedrawAsync();
-                return;
-            }
-        }
-
-        // ب) هل نقر على مدخل لإتمام التوصيل؟
-        if (_wiringSource != null)
-        {
-            foreach (var gate in Manager.Gates)
-            {
-                if (gate.Id == _wiringSource.Id) continue;
-
-                for (int i = 0; i < (gate.Inputs?.Length ?? 0); i++)
-                {
-                    var inPt = GetInputPoint(gate, i);
-                    if (Math.Abs(mx - inPt.X) <= 12 && Math.Abs(my - inPt.Y) <= 12)
-                    {
-                        Manager.AddWire(new Wire(_wiringSource, gate, i));
-                        _wiringSource = null;
-
-                        Manager.Simulate();
-                        await RedrawAsync();
-                        await OnBoardUpdated.InvokeAsync();
-                        return;
-                    }
-                }
-            }
-            _wiringSource = null;
-            await RedrawAsync();
+            _renderPending = true;
             return;
         }
 
-        // ج) النقر على البوابة لتحريكها أو لقلب Switch
-        for (int i = Manager.Gates.Count - 1; i >= 0; i--)
-        {
-            var gate = Manager.Gates[i];
-            double w = (gate is Switch) ? 90 : 110;
-            double h = (gate is Switch) ? 50 : 60;
+        _isRendering = true;
 
-            if (mx >= gate.X - 35 && mx <= gate.X + w && my >= gate.Y - 10 && my <= gate.Y + h)
+        try
+        {
+            do
             {
-                if (gate is Switch sw)
+                _renderPending = false;
+                await DrawCanvasAsync();
+            }
+            while (_renderPending);
+        }
+        finally
+        {
+            _isRendering = false;
+        }
+    }
+
+    // يستدعيها Home بعد التعديل من الشريط الجانبي أو بعد تحميل دارة.
+    // لا تطلق OnBoardUpdated حتى لا تنشأ حلقة تحديث بين الأب واللوحة.
+    public Task RedrawAsync()
+    {
+        return InvokeAsync(async () =>
+        {
+            ResetInteractionState();
+            _observedManager = Manager;
+            _refreshCircuitAfterRender = false;
+            SetStatus("تم تحديث الدارة.", false);
+            await SimulateAndRefreshAsync();
+        });
+    }
+
+    private async Task SimulateAndRefreshAsync()
+    {
+        if (Manager == null)
+            return;
+
+        var result = Manager.TrySimulate();
+        _validationMessage = result.IsValid ? null : result.Message;
+
+        if (!result.IsValid)
+            SetStatus("تعذر حساب الدارة. صحّح التوصيلات المشار إليها.", true);
+
+        if (_canvasRef == null)
+            _redrawAfterRender = true;
+        else
+            await RequestDrawAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ResetInteractionState()
+    {
+        _selectedGate = null;
+        _selectedWire = null;
+        _draggingGate = null;
+        _hasMovedGate = false;
+        _dragOffsetX = 0;
+        _dragOffsetY = 0;
+        _isPanning = false;
+        _isPanMode = false;
+        _panStartMouseX = 0;
+        _panStartMouseY = 0;
+        _tempWireEndX = 0;
+        _tempWireEndY = 0;
+        ResetWiringState();
+        _occupiedInputs.Clear();
+        _validationMessage = null;
+        _isErrorStatus = false;
+
+        // إلغاء جلسة قديمة فقط؛ لا نضيف تنفيذًا للوضع التعليمي في هذه الحزمة.
+        _stepSimulator = null;
+        _isEducationalMode = false;
+    }
+
+    private async Task NotifyUserModificationAsync()
+    {
+        if (Manager == null)
+            return;
+
+        // تعديل الدارة يلغي أي جلسة خطوات قديمة، مع إبقاء التحديد الحالي صالحًا.
+        _stepSimulator = null;
+        _isEducationalMode = false;
+        await SimulateAndRefreshAsync();
+
+        if (OnBoardUpdated.HasDelegate)
+            await OnBoardUpdated.InvokeAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await RequestDrawAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ───────────────────────── الإحداثيات ─────────────────────────
+
+    // CircuitX = (ScreenX - PanX) / Zoom
+    private (double X, double Y) ScreenToCircuit(double screenX, double screenY)
+    {
+        return (
+            (screenX - _panX) / _zoom,
+            (screenY - _panY) / _zoom
+        );
+    }
+
+    private static double SnapToGrid(double value)
+    {
+        return Math.Round(value / GridSize) * GridSize;
+    }
+
+    private static (double X, double Y) GetOutputPinPosition(IGate gate)
+    {
+        return (gate.X + GateWidth, gate.Y + GateHeight / 2);
+    }
+
+    private static (double X, double Y) GetInputPinPosition(IGate gate, int inputIndex)
+    {
+        int count = gate.Inputs?.Length ?? 0;
+
+        if (count <= 1)
+            return (gate.X, gate.Y + GateHeight / 2);
+
+        double spacing = GateHeight / (count + 1);
+
+        return (gate.X, gate.Y + spacing * (inputIndex + 1));
+    }
+
+    private static bool HasOutputPin(IGate gate)
+    {
+        return !IsGateType(gate, "LAMP");
+    }
+
+    private static bool IsGateType(IGate gate, string type)
+    {
+        return string.Equals(gate.GateType, type, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ───────────────────────── الرسم الرئيسي ─────────────────────────
+
+    private async Task DrawCanvasAsync()
+    {
+        if (_canvasRef == null || Manager == null)
+            return;
+
+        // لقطة للقوائم قبل استدعاءات JS؛ قد تتغير القوائم من مكون آخر أثناء انتظار الرسم.
+        var gates = Manager.Gates.Where(g => g != null && g.Inputs != null).ToArray();
+        var gateSet = new HashSet<IGate>(gates, ReferenceEqualityComparer.Instance);
+        var wires = Manager.Wires.Where(w =>
+            w != null && w.SourceGate != null && w.TargetGate != null &&
+            gateSet.Contains(w.SourceGate) && gateSet.Contains(w.TargetGate) &&
+            w.TargetInputIndex >= 0 && w.TargetInputIndex < w.TargetGate.Inputs.Length).ToArray();
+
+        // تجهيز المداخل المشغولة مرة واحدة لتلوين المنافذ المتاحة أثناء السحب.
+        _occupiedInputs = new HashSet<(IGate, int)>();
+
+        if (_isDrawingTempWire)
+        {
+            foreach (var w in wires)
+            {
+                if (w.TargetGate != null)
+                    _occupiedInputs.Add((w.TargetGate, w.TargetInputIndex));
+            }
+        }
+
+        await using var ctx = await _canvasRef.GetContext2DAsync();
+        await using var batch = ctx.CreateBatch();
+
+        await ctx.SaveAsync();
+
+        await ctx.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
+        await ctx.FillStyleAsync("#ffffff");
+        await ctx.FillRectAsync(0, 0, _canvasWidth, _canvasHeight);
+
+        await ctx.SaveAsync();
+        await ctx.TranslateAsync(_panX, _panY);
+        await ctx.ScaleAsync(_zoom, _zoom);
+
+        await DrawGridAsync(ctx);
+
+        foreach (var wire in wires)
+            await DrawWireAsync(ctx, wire);
+
+        if (_isDrawingTempWire && _wiringSourceGate != null)
+            await DrawTemporaryWireAsync(ctx);
+
+        foreach (var gate in gates)
+            await DrawGateAsync(ctx, gate);
+
+        await ctx.RestoreAsync();
+        await ctx.RestoreAsync();
+    }
+
+    private async Task DrawGridAsync(Context2D ctx)
+    {
+        double startX = Math.Floor((-_panX / _zoom) / GridSize) * GridSize - GridSize;
+        double startY = Math.Floor((-_panY / _zoom) / GridSize) * GridSize - GridSize;
+
+        double endX = startX + _canvasWidth / _zoom + GridSize * 2;
+        double endY = startY + _canvasHeight / _zoom + GridSize * 2;
+
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync("#e2e8f0");
+        await ctx.LineWidthAsync(1 / _zoom);
+
+        for (double x = startX; x <= endX; x += GridSize)
+        {
+            await ctx.MoveToAsync(x, startY);
+            await ctx.LineToAsync(x, endY);
+        }
+
+        for (double y = startY; y <= endY; y += GridSize)
+        {
+            await ctx.MoveToAsync(startX, y);
+            await ctx.LineToAsync(endX, y);
+        }
+
+        await ctx.StrokeAsync();
+    }
+
+    // ───────────────────────── الأسلاك ─────────────────────────
+
+    private async Task DrawWireAsync(Context2D ctx, Wire wire)
+    {
+        if (wire.SourceGate == null || wire.TargetGate == null)
+            return;
+
+        var (x1, y1) = GetOutputPinPosition(wire.SourceGate);
+        var (x2, y2) = GetInputPinPosition(wire.TargetGate, wire.TargetInputIndex);
+
+        bool selected = ReferenceEquals(wire, _selectedWire);
+        bool high = wire.SourceGate.Output;
+
+        double midX = (x1 + x2) / 2;
+
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync(selected ? "#f59e0b" : high ? "#10b981" : "#64748b");
+        await ctx.LineWidthAsync(selected ? 4 : high ? 3 : 2.2);
+        await ctx.LineCapAsync(LineCap.Round);
+        await ctx.LineJoinAsync(LineJoin.Round);
+
+        await ctx.MoveToAsync(x1, y1);
+        await ctx.LineToAsync(midX, y1);
+        await ctx.LineToAsync(midX, y2);
+        await ctx.LineToAsync(x2, y2);
+        await ctx.StrokeAsync();
+    }
+
+    private async Task DrawTemporaryWireAsync(Context2D ctx)
+    {
+        if (_wiringSourceGate == null)
+            return;
+
+        var (x1, y1) = GetOutputPinPosition(_wiringSourceGate);
+
+        double x2 = _tempWireEndX;
+        double y2 = _tempWireEndY;
+
+        bool snapped = _hoverInputGate != null && _hoverInputIndex >= 0;
+
+        if (snapped)
+        {
+            var p = GetInputPinPosition(_hoverInputGate!, _hoverInputIndex);
+            x2 = p.X;
+            y2 = p.Y;
+        }
+
+        double midX = (x1 + x2) / 2;
+
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync(
+            !snapped ? "#2563eb" : _hoverInputValid ? "#16a34a" : "#ef4444");
+        await ctx.LineWidthAsync(2.5);
+        await ctx.LineCapAsync(LineCap.Round);
+        await ctx.LineJoinAsync(LineJoin.Round);
+        await ctx.SetLineDashAsync(new double[] { 7, 5 });
+
+        await ctx.MoveToAsync(x1, y1);
+        await ctx.LineToAsync(midX, y1);
+        await ctx.LineToAsync(midX, y2);
+        await ctx.LineToAsync(x2, y2);
+        await ctx.StrokeAsync();
+
+        await ctx.SetLineDashAsync(Array.Empty<double>());
+    }
+
+    // ───────────────────────── البوابات (رموز ANSI بدون صناديق) ─────────────────────────
+
+    private async Task DrawGateAsync(Context2D ctx, IGate gate)
+    {
+        bool selected =
+            ReferenceEquals(gate, _selectedGate) ||
+            ReferenceEquals(gate, _wiringSourceGate);
+
+        string stroke = selected ? "#2563eb" : "#1e293b";
+
+        double midY = gate.Y + GateHeight / 2;
+        string type = (gate.GateType ?? string.Empty).ToUpperInvariant();
+
+        await ctx.LineCapAsync(LineCap.Round);
+        await ctx.LineJoinAsync(LineJoin.Round);
+
+        // 1) خطوط المداخل (Input Pins) تنبثق من يسار الرمز.
+        int inputCount = gate.Inputs?.Length ?? 0;
+
+        for (int i = 0; i < inputCount; i++)
+        {
+            var (px, py) = GetInputPinPosition(gate, i);
+            double endX = GetInputLeadEndX(gate, type, py - midY);
+
+            await ctx.BeginPathAsync();
+            await ctx.StrokeStyleAsync(gate.Inputs![i] ? "#16a34a" : "#64748b");
+            await ctx.LineWidthAsync(2);
+            await ctx.MoveToAsync(px, py);
+            await ctx.LineToAsync(endX, py);
+            await ctx.StrokeAsync();
+        }
+
+        // 2) خط المخرج (Output Pin) ينبثق من يمين الرمز.
+        if (HasOutputPin(gate))
+        {
+            var (ox, oy) = GetOutputPinPosition(gate);
+
+            await ctx.BeginPathAsync();
+            await ctx.StrokeStyleAsync(gate.Output ? "#10b981" : "#64748b");
+            await ctx.LineWidthAsync(2);
+            await ctx.MoveToAsync(gate.X + BodyRight, oy);
+            await ctx.LineToAsync(ox, oy);
+            await ctx.StrokeAsync();
+        }
+
+        // 3) الرمز نفسه.
+        if (IsGateType(gate, "SWITCH"))
+            await DrawSwitchSymbolAsync(ctx, gate, selected);
+        else if (IsGateType(gate, "LAMP"))
+            await DrawLampSymbolAsync(ctx, gate, stroke);
+        else
+            await DrawLogicSymbolAsync(ctx, gate, type, stroke);
+
+        // 4) اسم البوابة (نص فقط، بدون إطار).
+        await ctx.FillStyleAsync(selected ? "#2563eb" : "#64748b");
+        await ctx.FontAsync("bold 11px Arial");
+        await ctx.TextAlignAsync(TextAlign.Center);
+        await ctx.FillTextAsync(gate.GateType ?? string.Empty,
+            gate.X + GateWidth / 2, gate.Y + GateHeight - 1);
+
+        // 5) نقاط التوصيل.
+        for (int i = 0; i < inputCount; i++)
+        {
+            var (px, py) = GetInputPinPosition(gate, i);
+
+            bool hovered = ReferenceEquals(gate, _hoverInputGate) && i == _hoverInputIndex;
+
+            bool candidate = _isDrawingTempWire
+                             && !ReferenceEquals(gate, _wiringSourceGate)
+                             && !_occupiedInputs.Contains((gate, i));
+
+            await DrawPinAsync(ctx, px, py, gate.Inputs![i], hovered, _hoverInputValid, candidate);
+        }
+
+        if (HasOutputPin(gate))
+        {
+            var (ox, oy) = GetOutputPinPosition(gate);
+            await DrawPinAsync(ctx, ox, oy, gate.Output, false, true, false);
+        }
+    }
+
+    private async Task DrawPinAsync(
+        Context2D ctx,
+        double x,
+        double y,
+        bool value,
+        bool hovered,
+        bool valid,
+        bool candidate)
+    {
+        if (hovered)
+        {
+            await ctx.BeginPathAsync();
+            await ctx.FillStyleAsync(valid ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)");
+            await ctx.StrokeStyleAsync(valid ? "#16a34a" : "#dc2626");
+            await ctx.LineWidthAsync(2);
+            await ctx.ArcAsync(x, y, 10, 0, Math.PI * 2);
+            await ctx.FillAsync(FillRule.NonZero);
+            await ctx.StrokeAsync();
+        }
+        else if (candidate)
+        {
+            await ctx.BeginPathAsync();
+            await ctx.StrokeStyleAsync("#93c5fd");
+            await ctx.LineWidthAsync(1.5);
+            await ctx.ArcAsync(x, y, 7, 0, Math.PI * 2);
+            await ctx.StrokeAsync();
+        }
+
+        await ctx.BeginPathAsync();
+        await ctx.FillStyleAsync(value ? "#16a34a" : "#64748b");
+        await ctx.StrokeStyleAsync("#ffffff");
+        await ctx.LineWidthAsync(1.5);
+        await ctx.ArcAsync(x, y, PinDotRadius, 0, Math.PI * 2);
+        await ctx.FillAsync(FillRule.NonZero);
+        await ctx.StrokeAsync();
+    }
+
+    // نهاية خط المدخل: يلامس حافة الرمز تماماً (والحافة المقعرة لبوابات OR).
+    private static double GetInputLeadEndX(IGate gate, string type, double dy)
+    {
+        double x0 = gate.X + BodyLeft;
+
+        switch (type)
+        {
+            case "OR":
+            case "NOR":
+                return x0 + OrIndent(dy);
+
+            case "XOR":
+            case "XNOR":
+                return x0 - 6 + OrIndent(dy);
+
+            default:
+                return x0;
+        }
+    }
+
+    private static double OrIndent(double dy)
+    {
+        double half = BodyHeight / 2;
+        double r = Math.Abs(dy) / half;
+
+        if (r >= 1)
+            return 0;
+
+        return 0.75 * OrCurve * (1 - r * r);
+    }
+
+    private async Task DrawLogicSymbolAsync(
+        Context2D ctx,
+        IGate gate,
+        string type,
+        string stroke)
+    {
+        double mid = gate.Y + GateHeight / 2;
+        double top = mid - BodyHeight / 2;
+        double bottom = mid + BodyHeight / 2;
+        double h = BodyHeight;
+
+        bool inverted = type is "NAND" or "NOR" or "NOT" or "XNOR";
+
+        double x0 = gate.X + BodyLeft;
+        double tipX = gate.X + BodyRight - (inverted ? BubbleRadius * 2 : 0);
+        double w = tipX - x0;
+
+        await ctx.StrokeStyleAsync(stroke);
+        await ctx.LineWidthAsync(2);
+
+        switch (type)
+        {
+            case "AND":
+            case "NAND":
                 {
-                    sw.Toggle();
-                    Manager.Simulate();
-                    await RedrawAsync();
-                    await OnBoardUpdated.InvokeAsync();
-                    return;
+                    double r = h / 2;
+
+                    await ctx.BeginPathAsync();
+                    await ctx.MoveToAsync(x0, top);
+                    await ctx.LineToAsync(tipX - r, top);
+                    await ctx.ArcAsync(tipX - r, mid, r, -Math.PI / 2, Math.PI / 2);
+                    await ctx.LineToAsync(x0, bottom);
+                    await ctx.ClosePathAsync();
+                    await ctx.StrokeAsync();
+                    break;
                 }
 
-                _selectedGate = gate;
-                _isDragging = true;
-                _dragOffsetX = mx - gate.X;
-                _dragOffsetY = my - gate.Y;
+            case "OR":
+            case "NOR":
+            case "XOR":
+            case "XNOR":
+                {
+                    await ctx.BeginPathAsync();
+                    await ctx.MoveToAsync(x0, top);
+                    await ctx.BezierCurveToAsync(
+                        x0 + w * 0.5, top,
+                        tipX - w * 0.15, mid - h * 0.35,
+                        tipX, mid);
+                    await ctx.BezierCurveToAsync(
+                        tipX - w * 0.15, mid + h * 0.35,
+                        x0 + w * 0.5, bottom,
+                        x0, bottom);
+                    await ctx.BezierCurveToAsync(
+                        x0 + OrCurve, bottom - h / 3,
+                        x0 + OrCurve, top + h / 3,
+                        x0, top);
+                    await ctx.StrokeAsync();
+
+                    if (type is "XOR" or "XNOR")
+                    {
+                        await ctx.BeginPathAsync();
+                        await ctx.MoveToAsync(x0 - 6, bottom);
+                        await ctx.BezierCurveToAsync(
+                            x0 - 6 + OrCurve, bottom - h / 3,
+                            x0 - 6 + OrCurve, top + h / 3,
+                            x0 - 6, top);
+                        await ctx.StrokeAsync();
+                    }
+
+                    break;
+                }
+
+            case "NOT":
+            case "BUF":
+            case "BUFFER":
+                {
+                    await ctx.BeginPathAsync();
+                    await ctx.MoveToAsync(x0, top);
+                    await ctx.LineToAsync(tipX, mid);
+                    await ctx.LineToAsync(x0, bottom);
+                    await ctx.ClosePathAsync();
+                    await ctx.StrokeAsync();
+                    break;
+                }
+
+            default:
+                {
+                    // نوع غير معروف: اسم نصي فقط مع الخطوط، بدون أي إطار.
+                    await ctx.FillStyleAsync(stroke);
+                    await ctx.FontAsync("bold 12px Arial");
+                    await ctx.TextAlignAsync(TextAlign.Center);
+                    await ctx.FillTextAsync(type, (x0 + gate.X + BodyRight) / 2, mid + 4);
+                    break;
+                }
+        }
+
+        if (inverted)
+            await DrawInversionBubbleAsync(ctx, tipX + BubbleRadius, mid, stroke);
+    }
+
+    private async Task DrawInversionBubbleAsync(Context2D ctx, double x, double y, string stroke)
+    {
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync(stroke);
+        await ctx.LineWidthAsync(2);
+        await ctx.ArcAsync(x, y, BubbleRadius, 0, Math.PI * 2);
+        await ctx.StrokeAsync();
+    }
+
+    // SWITCH: مفتاح منزلق (Toggle) أنيق.
+    private async Task DrawSwitchSymbolAsync(Context2D ctx, IGate gate, bool selected)
+    {
+        double cx = gate.X + 50;
+        double cy = gate.Y + GateHeight / 2;
+        bool on = gate.Output;
+
+        const double trackHalf = 11;   // نصف طول الجزء المستقيم
+        const double trackThickness = 22;
+
+        // المسار.
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync(on ? "#16a34a" : "#94a3b8");
+        await ctx.LineWidthAsync(trackThickness);
+        await ctx.MoveToAsync(cx - trackHalf, cy);
+        await ctx.LineToAsync(cx + trackHalf, cy);
+        await ctx.StrokeAsync();
+
+        if (selected)
+        {
+            await ctx.BeginPathAsync();
+            await ctx.StrokeStyleAsync("#2563eb");
+            await ctx.LineWidthAsync(2);
+            await ctx.ArcAsync(cx - trackHalf, cy, trackThickness / 2 + 3, Math.PI / 2, Math.PI * 1.5);
+            await ctx.LineToAsync(cx + trackHalf, cy - trackThickness / 2 - 3);
+            await ctx.ArcAsync(cx + trackHalf, cy, trackThickness / 2 + 3, -Math.PI / 2, Math.PI / 2);
+            await ctx.ClosePathAsync();
+            await ctx.StrokeAsync();
+        }
+
+        // المقبض.
+        double knobX = on ? cx + trackHalf : cx - trackHalf;
+
+        await ctx.BeginPathAsync();
+        await ctx.FillStyleAsync("#ffffff");
+        await ctx.StrokeStyleAsync(on ? "#15803d" : "#64748b");
+        await ctx.LineWidthAsync(1.5);
+        await ctx.ArcAsync(knobX, cy, 8, 0, Math.PI * 2);
+        await ctx.FillAsync(FillRule.NonZero);
+        await ctx.StrokeAsync();
+
+        // قيمة المفتاح على الجانب المقابل للمقبض.
+        await ctx.FillStyleAsync("#ffffff");
+        await ctx.FontAsync("bold 11px Arial");
+        await ctx.TextAlignAsync(TextAlign.Center);
+        await ctx.FillTextAsync(on ? "1" : "0",
+            on ? cx - trackHalf : cx + trackHalf, cy + 4);
+
+        // خط يصل المسار بدبوس الخرج.
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync(on ? "#10b981" : "#64748b");
+        await ctx.LineWidthAsync(2);
+        await ctx.MoveToAsync(cx + trackHalf + trackThickness / 2, cy);
+        await ctx.LineToAsync(gate.X + BodyRight, cy);
+        await ctx.StrokeAsync();
+    }
+
+    // LAMP: مصباح دائري متوهج بدون أي صندوق.
+    private async Task DrawLampSymbolAsync(Context2D ctx, IGate gate, string stroke)
+    {
+        double cx = gate.X + 58;
+        double cy = gate.Y + GateHeight / 2;
+        const double radius = 14;
+        bool on = gate.Output;
+
+        // وصلة من المنفذ إلى حافة المصباح (تُرسم هنا لأن المصباح بلا دالة جسم عامة).
+        int inputCount = gate.Inputs?.Length ?? 0;
+
+        for (int i = 0; i < inputCount; i++)
+        {
+            var (px, py) = GetInputPinPosition(gate, i);
+            double dy = py - cy;
+
+            if (Math.Abs(dy) >= radius)
+                continue;
+
+            double edgeX = cx - Math.Sqrt(radius * radius - dy * dy);
+
+            await ctx.BeginPathAsync();
+            await ctx.StrokeStyleAsync(gate.Inputs![i] ? "#16a34a" : "#64748b");
+            await ctx.LineWidthAsync(2);
+            await ctx.MoveToAsync(gate.X + BodyLeft, py);
+            await ctx.LineToAsync(edgeX, py);
+            await ctx.StrokeAsync();
+        }
+
+        if (on)
+        {
+            double[] glowRadii = { 30, 24, 19 };
+            string[] glowColors =
+            {
+                "rgba(251,191,36,0.12)",
+                "rgba(251,191,36,0.20)",
+                "rgba(251,191,36,0.32)"
+            };
+
+            for (int i = 0; i < glowRadii.Length; i++)
+            {
+                await ctx.BeginPathAsync();
+                await ctx.FillStyleAsync(glowColors[i]);
+                await ctx.ArcAsync(cx, cy, glowRadii[i], 0, Math.PI * 2);
+                await ctx.FillAsync(FillRule.NonZero);
+            }
+        }
+
+        await ctx.BeginPathAsync();
+        await ctx.FillStyleAsync(on ? "#fde047" : "#f1f5f9");
+        await ctx.StrokeStyleAsync(on ? "#d97706" : stroke);
+        await ctx.LineWidthAsync(2);
+        await ctx.ArcAsync(cx, cy, radius, 0, Math.PI * 2);
+        await ctx.FillAsync(FillRule.NonZero);
+        await ctx.StrokeAsync();
+
+        // علامة X داخل المصباح (الرمز القياسي).
+        double d = radius * 0.62;
+
+        await ctx.BeginPathAsync();
+        await ctx.StrokeStyleAsync(on ? "#b45309" : "#94a3b8");
+        await ctx.LineWidthAsync(1.8);
+        await ctx.MoveToAsync(cx - d, cy - d);
+        await ctx.LineToAsync(cx + d, cy + d);
+        await ctx.MoveToAsync(cx + d, cy - d);
+        await ctx.LineToAsync(cx - d, cy + d);
+        await ctx.StrokeAsync();
+    }
+
+    // ───────────────────────── أحداث الفأرة ─────────────────────────
+
+    private async Task HandleMouseDownAsync(MouseEventArgs e)
+    {
+        if (Manager == null)
+            return;
+
+        var (cx, cy) = ScreenToCircuit(e.OffsetX, e.OffsetY);
+
+        if (_isPanMode || e.Button == 1)
+        {
+            _isPanning = true;
+            _panStartMouseX = e.OffsetX - _panX;
+            _panStartMouseY = e.OffsetY - _panY;
+            return;
+        }
+
+        // الزر الأيمن: فصل سلك من مدخل، أو حذف بوابة، أو حذف سلك.
+        if (e.Button == 2)
+        {
+            if (TryFindInputPinAt(cx, cy, out var pinGate, out int pinIndex) && pinGate != null)
+            {
+                var connected = Manager.Wires.FirstOrDefault(w =>
+                    ReferenceEquals(w.TargetGate, pinGate) &&
+                    w.TargetInputIndex == pinIndex);
+
+                if (connected != null)
+                {
+                    RemoveWireSafely(connected);
+                    _selectedWire = null;
+
+                    SetStatus($"تم فصل السلك عن In{pinIndex}.", false);
+                    await NotifyUserModificationAsync();
+                    return;
+                }
+            }
+
+            var gateToDelete = FindGateAt(cx, cy);
+
+            if (gateToDelete != null)
+            {
+                string type = gateToDelete.GateType;
+                RemoveGateSafely(gateToDelete);
+
+                SetStatus($"تم حذف البوابة {type}.", false);
+                await NotifyUserModificationAsync();
                 return;
+            }
+
+            var wireToDelete = FindWireAt(cx, cy);
+
+            if (wireToDelete != null)
+            {
+                RemoveWireSafely(wireToDelete);
+                _selectedWire = null;
+
+                SetStatus("تم حذف السلك.", false);
+                await NotifyUserModificationAsync();
+            }
+
+            return;
+        }
+
+        _validationMessage = null;
+
+        // بدء سلك من مخرج.
+        if (TryFindOutputPinAt(cx, cy, out var source) && source != null)
+        {
+            _wiringSourceGate = source;
+            _isDrawingTempWire = true;
+            _tempWireEndX = cx;
+            _tempWireEndY = cy;
+
+            _hoverInputGate = null;
+            _hoverInputIndex = -1;
+            _hoverInputValid = false;
+
+            _selectedGate = source;
+            _selectedWire = null;
+
+            SetStatus($"بدأ التوصيل من {source.GateType}. اسحب إلى مدخل البوابة المطلوبة.", false);
+
+            await RefreshAsync();
+            return;
+        }
+
+        var clickedGate = FindGateAt(cx, cy);
+
+        if (clickedGate != null)
+        {
+            _selectedGate = clickedGate;
+            _selectedWire = null;
+
+            _draggingGate = clickedGate;
+            _hasMovedGate = false;
+
+            _dragOffsetX = cx - clickedGate.X;
+            _dragOffsetY = cy - clickedGate.Y;
+
+            await RequestDrawAsync();
+            return;
+        }
+
+        var clickedWire = FindWireAt(cx, cy);
+
+        if (clickedWire != null)
+        {
+            _selectedWire = clickedWire;
+            _selectedGate = null;
+
+            SetStatus("تم تحديد السلك. يمكنك حذفه بزر الحذف.", false);
+            await RefreshAsync();
+            return;
+        }
+
+        _selectedGate = null;
+        _selectedWire = null;
+
+        _isPanning = true;
+        _panStartMouseX = e.OffsetX - _panX;
+        _panStartMouseY = e.OffsetY - _panY;
+
+        await RefreshAsync();
+    }
+
+    private async Task HandleMouseMoveAsync(MouseEventArgs e)
+    {
+        if (Manager == null)
+            return;
+
+        if (_isPanning)
+        {
+            _panX = e.OffsetX - _panStartMouseX;
+            _panY = e.OffsetY - _panStartMouseY;
+
+            await RequestDrawAsync();
+            return;
+        }
+
+        var (cx, cy) = ScreenToCircuit(e.OffsetX, e.OffsetY);
+
+        if (_isDrawingTempWire && _wiringSourceGate != null)
+        {
+            _tempWireEndX = cx;
+            _tempWireEndY = cy;
+
+            UpdateInputSnap(cx, cy);
+
+            await RequestDrawAsync();
+            return;
+        }
+
+        if (_draggingGate != null)
+        {
+            double newX = cx - _dragOffsetX;
+            double newY = cy - _dragOffsetY;
+
+            if (Math.Abs(newX - _draggingGate.X) > 1 ||
+                Math.Abs(newY - _draggingGate.Y) > 1)
+            {
+                _hasMovedGate = true;
+            }
+
+            _draggingGate.X = newX;
+            _draggingGate.Y = newY;
+
+            await RequestDrawAsync();
+        }
+    }
+
+    // الجذب المغناطيسي: أقرب مدخل ضمن SnapRadiusPx، ثم تحقق واحد فقط عند تغير الهدف.
+    private void UpdateInputSnap(double x, double y)
+    {
+        if (_wiringSourceGate == null)
+            return;
+
+        double snapRadius = SnapRadiusPx / _zoom;
+        double best = snapRadius;
+
+        IGate? bestGate = null;
+        int bestIndex = -1;
+
+        foreach (var gate in Manager.Gates)
+        {
+            int count = gate.Inputs?.Length ?? 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var (px, py) = GetInputPinPosition(gate, i);
+                double distance = Distance(x, y, px, py);
+
+                if (distance <= best)
+                {
+                    best = distance;
+                    bestGate = gate;
+                    bestIndex = i;
+                }
+            }
+        }
+
+        if (ReferenceEquals(bestGate, _hoverInputGate) && bestIndex == _hoverInputIndex)
+            return; // نفس الهدف، النتيجة المخزنة ما زالت صحيحة.
+
+        _hoverInputGate = bestGate;
+        _hoverInputIndex = bestIndex;
+        _hoverInputValid = false;
+
+        if (bestGate == null)
+            return;
+
+        if (ReferenceEquals(bestGate, _wiringSourceGate) || IsInputOccupied(bestGate, bestIndex))
+            return;
+
+        var result = CircuitValidator.CanConnect(
+            Manager,
+            _wiringSourceGate,
+            bestGate,
+            bestIndex);
+
+        _hoverInputValid = result.IsValid;
+    }
+
+    private bool IsInputOccupied(IGate gate, int index)
+    {
+        return Manager.Wires.Any(w =>
+            ReferenceEquals(w.TargetGate, gate) &&
+            w.TargetInputIndex == index);
+    }
+
+    private async Task HandleMouseUpAsync(MouseEventArgs e)
+    {
+        if (Manager == null)
+            return;
+
+        if (_isPanning)
+        {
+            _isPanning = false;
+            await RefreshAsync();
+            return;
+        }
+
+        if (_isDrawingTempWire && _wiringSourceGate != null)
+        {
+            var (cx, cy) = ScreenToCircuit(e.OffsetX, e.OffsetY);
+
+            // أحدث نقطة جذب عند لحظة الإفلات.
+            UpdateInputSnap(cx, cy);
+
+            if (_hoverInputGate != null && _hoverInputIndex >= 0)
+            {
+                await CompleteWireConnectionAsync(
+                    _wiringSourceGate,
+                    _hoverInputGate,
+                    _hoverInputIndex);
+
+                return;
+            }
+
+            ResetWiringState();
+
+            SetStatus("لم يتم التوصيل. اسحب السلك إلى مدخل صالح.", false);
+            await RefreshAsync();
+            return;
+        }
+
+        if (_draggingGate != null)
+        {
+            var gate = _draggingGate;
+            _draggingGate = null;
+
+            if (_hasMovedGate)
+            {
+                gate.X = SnapToGrid(gate.X);
+                gate.Y = SnapToGrid(gate.Y);
+
+                SetStatus($"تم نقل {gate.GateType} إلى ({gate.X:0}, {gate.Y:0}).", false);
+                await NotifyUserModificationAsync();
+            }
+            else if (gate is Switch sw)
+            {
+                sw.Toggle();
+
+                SetStatus($"تم تغيير المفتاح إلى {(sw.State ? "ON (1)" : "OFF (0)")}.", false);
+                await NotifyUserModificationAsync();
+            }
+            else
+            {
+                await RefreshAsync();
             }
         }
     }
 
-    private async Task OnMouseMove(MouseEventArgs e)
+    private async Task HandleMouseLeaveAsync(MouseEventArgs e)
     {
-        _mouseX = e.OffsetX;
-        _mouseY = e.OffsetY;
+        _isPanning = false;
 
-        if (_isDragging && _selectedGate != null)
+        if (_isDrawingTempWire)
+            ResetWiringState();
+
+        if (_draggingGate != null)
         {
-            _selectedGate.X = e.OffsetX - _dragOffsetX;
-            _selectedGate.Y = e.OffsetY - _dragOffsetY;
-            await RedrawAsync();
+            var gate = _draggingGate;
+            _draggingGate = null;
+
+            if (_hasMovedGate)
+            {
+                gate.X = SnapToGrid(gate.X);
+                gate.Y = SnapToGrid(gate.Y);
+                await NotifyUserModificationAsync();
+                return;
+            }
         }
-        else if (_wiringSource != null)
-        {
-            await RedrawAsync();
-        }
+
+        await RefreshAsync();
     }
 
-    private async Task OnMouseUp(MouseEventArgs e)
+    private void ResetWiringState()
     {
-        if (_isDragging)
+        _isDrawingTempWire = false;
+        _wiringSourceGate = null;
+        _hoverInputGate = null;
+        _hoverInputIndex = -1;
+        _hoverInputValid = false;
+    }
+
+    // ───────────────────────── التوصيل والتحقق ─────────────────────────
+
+    private async Task CompleteWireConnectionAsync(
+        IGate source,
+        IGate target,
+        int targetInputIndex)
+    {
+        // القرار النهائي في المحرك، والفحص نفسه يعمل مع أي مكون يستعمل المدير.
+        var validation = Manager.TryAddWire(new Wire(source, target, targetInputIndex));
+
+        if (!validation.IsValid)
         {
-            _isDragging = false;
+            RejectConnection($"رفض التوصيل: {validation.Message}");
+            await RefreshAsync();
+            return;
+        }
+
+        _validationMessage = null;
+        ResetWiringState();
+
+        SetStatus(
+            $"تم التوصيل: {source.GateType} → {target.GateType} (In{targetInputIndex}).",
+            false);
+
+        await NotifyUserModificationAsync();
+    }
+
+    private void RejectConnection(string message)
+    {
+        _validationMessage = message;
+        ResetWiringState();
+        SetStatus(message, true);
+    }
+
+    // ───────────────────────── الحذف الآمن (مع تصفير المداخل) ─────────────────────────
+
+    private void RemoveWireSafely(Wire wire)
+    {
+        var target = wire.TargetGate;
+        int index = wire.TargetInputIndex;
+
+        Manager.RemoveWire(wire);
+
+        ResetInputIfFree(target, index);
+
+        if (ReferenceEquals(_selectedWire, wire))
+            _selectedWire = null;
+    }
+
+    private void RemoveGateSafely(IGate gate)
+    {
+        var affected = Manager.Wires
+            .Where(w => ReferenceEquals(w.SourceGate, gate)
+                        && w.TargetGate != null
+                        && !ReferenceEquals(w.TargetGate, gate))
+            .Select(w => (Gate: w.TargetGate, Index: w.TargetInputIndex))
+            .ToList();
+
+        Manager.RemoveGate(gate);
+
+        foreach (var item in affected)
+            ResetInputIfFree(item.Gate, item.Index);
+
+        if (ReferenceEquals(_selectedGate, gate))
             _selectedGate = null;
-            await OnBoardUpdated.InvokeAsync();
+
+        if (ReferenceEquals(_draggingGate, gate))
+            _draggingGate = null;
+
+        if (ReferenceEquals(_wiringSourceGate, gate) || ReferenceEquals(_hoverInputGate, gate))
+            ResetWiringState();
+    }
+
+    private void ResetInputIfFree(IGate? gate, int index)
+    {
+        if (gate == null || index < 0)
+            return;
+
+        if (IsInputOccupied(gate, index))
+            return;
+
+        try
+        {
+            if (gate.Inputs != null && index < gate.Inputs.Length)
+                gate.Inputs[index] = false;
+        }
+        catch
+        {
+            // إذا كان المدير يصفّر المدخل بنفسه فلا مشكلة.
         }
     }
 
-    private static (double X, double Y) GetInputPoint(IGate gate, int inputIndex)
+    // ───────────────────────── البحث والالتقاط ─────────────────────────
+
+    private IGate? FindGateAt(double x, double y)
     {
-        string type = gate.GateType.ToUpperInvariant();
-        if (type == "LAMP") return (gate.X - 30, gate.Y + 25);
-        if (type == "NOT") return (gate.X - 35, gate.Y + 30);
+        for (int i = Manager.Gates.Count - 1; i >= 0; i--)
+        {
+            var gate = Manager.Gates[i];
 
-        int count = gate.Inputs?.Length ?? 2;
-        if (count == 1) return (gate.X - 35, gate.Y + 30);
+            if (x >= gate.X &&
+                x <= gate.X + GateWidth &&
+                y >= gate.Y &&
+                y <= gate.Y + GateHeight)
+            {
+                return gate;
+            }
+        }
 
-        double yPos = (inputIndex == 0) ? gate.Y + 15 : gate.Y + 45;
-        double xPos = (type == "OR" || type == "NOR" || type == "XOR") ? gate.X + 9 : gate.X - 35;
-        return (xPos, yPos);
+        return null;
     }
 
-    private static (double X, double Y) GetOutputPoint(IGate gate)
+    private bool TryFindOutputPinAt(double x, double y, out IGate? foundGate)
     {
-        string type = gate.GateType.ToUpperInvariant();
+        double hitRadius = PinPickRadiusPx / _zoom;
 
-        return type switch
+        foreach (var gate in Manager.Gates)
         {
-            "AND" => (gate.X + 105, gate.Y + 30),
-            "NAND" => (gate.X + 112, gate.Y + 30),
-            "OR" => (gate.X + 112, gate.Y + 30),
-            "NOR" => (gate.X + 120, gate.Y + 30),
-            "XOR" => (gate.X + 112, gate.Y + 30),
-            "NOT" => (gate.X + 110, gate.Y + 30),
-            "SWITCH" => (gate.X + 90, gate.Y + 17),
-            "LAMP" => (gate.X + 80, gate.Y + 25),
-            _ => (gate.X + 80, gate.Y + 30)
-        };
+            if (!HasOutputPin(gate))
+                continue;
+
+            var (px, py) = GetOutputPinPosition(gate);
+
+            if (Distance(x, y, px, py) <= hitRadius)
+            {
+                foundGate = gate;
+                return true;
+            }
+        }
+
+        foundGate = null;
+        return false;
+    }
+
+    private bool TryFindInputPinAt(double x, double y, out IGate? foundGate, out int inputIndex)
+    {
+        double hitRadius = PinPickRadiusPx / _zoom;
+
+        foreach (var gate in Manager.Gates)
+        {
+            int count = gate.Inputs?.Length ?? 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var (px, py) = GetInputPinPosition(gate, i);
+
+                if (Distance(x, y, px, py) <= hitRadius)
+                {
+                    foundGate = gate;
+                    inputIndex = i;
+                    return true;
+                }
+            }
+        }
+
+        foundGate = null;
+        inputIndex = -1;
+        return false;
+    }
+
+    private Wire? FindWireAt(double x, double y)
+    {
+        double tolerance = 8 / _zoom;
+
+        foreach (var wire in Manager.Wires)
+        {
+            if (wire.SourceGate == null || wire.TargetGate == null)
+                continue;
+
+            var (x1, y1) = GetOutputPinPosition(wire.SourceGate);
+            var (x2, y2) = GetInputPinPosition(wire.TargetGate, wire.TargetInputIndex);
+
+            double midX = (x1 + x2) / 2;
+
+            if (DistanceToSegment(x, y, x1, y1, midX, y1) <= tolerance ||
+                DistanceToSegment(x, y, midX, y1, midX, y2) <= tolerance ||
+                DistanceToSegment(x, y, midX, y2, x2, y2) <= tolerance)
+            {
+                return wire;
+            }
+        }
+
+        return null;
+    }
+
+    private static double Distance(double x1, double y1, double x2, double y2)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    private static double DistanceToSegment(
+        double px, double py,
+        double x1, double y1,
+        double x2, double y2)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+
+        if (dx == 0 && dy == 0)
+            return Distance(px, py, x1, y1);
+
+        double t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
+        t = Math.Clamp(t, 0, 1);
+
+        return Distance(px, py, x1 + t * dx, y1 + t * dy);
+    }
+
+    // ───────────────────────── التكبير والتحريك ─────────────────────────
+
+    // التكبير حول نقطة على الشاشة بحيث تبقى النقطة تحت المؤشر ثابتة.
+    private void ZoomAt(double screenX, double screenY, double factor)
+    {
+        var (cx, cy) = ScreenToCircuit(screenX, screenY);
+
+        _zoom = Math.Clamp(_zoom * factor, 0.4, 2.5);
+
+        _panX = screenX - cx * _zoom;
+        _panY = screenY - cy * _zoom;
+    }
+
+    private async Task HandleWheelAsync(WheelEventArgs e)
+    {
+        ZoomAt(e.OffsetX, e.OffsetY, e.DeltaY < 0 ? 1.12 : 1 / 1.12);
+        await RefreshAsync();
+    }
+
+    private async Task ZoomInAsync()
+    {
+        ZoomAt(_canvasWidth / 2.0, _canvasHeight / 2.0, 1.15);
+        await RefreshAsync();
+    }
+
+    private async Task ZoomOutAsync()
+    {
+        ZoomAt(_canvasWidth / 2.0, _canvasHeight / 2.0, 1 / 1.15);
+        await RefreshAsync();
+    }
+
+    private async Task ResetViewAsync()
+    {
+        _zoom = 1;
+        _panX = 0;
+        _panY = 0;
+
+        await RefreshAsync();
+    }
+
+    private void TogglePanMode()
+    {
+        _isPanMode = !_isPanMode;
+
+        SetStatus(
+            _isPanMode ? "وضع تحريك اللوحة مفعل." : "وضع تحريك اللوحة متوقف.",
+            false);
+    }
+
+    // ───────────────────────── أوامر شريط الأدوات ─────────────────────────
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (Manager == null)
+            return;
+
+        if (_selectedWire != null)
+        {
+            RemoveWireSafely(_selectedWire);
+            _selectedWire = null;
+
+            SetStatus("تم حذف السلك المحدد.", false);
+            await NotifyUserModificationAsync();
+            return;
+        }
+
+        if (_selectedGate != null)
+        {
+            string type = _selectedGate.GateType;
+
+            RemoveGateSafely(_selectedGate);
+            _selectedGate = null;
+
+            SetStatus($"تم حذف {type} والأسلاك المتصلة بها.", false);
+            await NotifyUserModificationAsync();
+        }
+    }
+
+    private async Task ClearBoardAsync()
+    {
+        if (Manager == null)
+            return;
+
+        Manager.Clear();
+
+        ResetInteractionState();
+
+        SetStatus("تم مسح جميع البوابات والأسلاك.", false);
+
+        await NotifyUserModificationAsync();
+    }
+
+    private async Task StartEducationalModeAsync()
+    {
+        if (Manager == null)
+            return;
+
+        _isEducationalMode = true;
+        _stepSimulator = new StepSimulator(Manager);
+        _stepSimulator.Reset();
+
+        SetStatus("بدأ الوضع التعليمي. اضغط الخطوة التالية لمتابعة المحاكاة.", false);
+
+        await RefreshAsync();
+    }
+
+    private async Task ExecuteNextStepAsync()
+    {
+        if (Manager == null)
+            return;
+
+        _stepSimulator ??= new StepSimulator(Manager);
+        _stepSimulator.ExecuteNextStep();
+
+        SetStatus(_stepSimulator.LastActionDescription, Manager.HasFeedbackLoop);
+
+        await RefreshAsync();
+
+        if (OnBoardUpdated.HasDelegate)
+            await OnBoardUpdated.InvokeAsync();
+    }
+
+    private async Task ResetEducationalAsync()
+    {
+        if (Manager == null)
+            return;
+
+        _stepSimulator ??= new StepSimulator(Manager);
+        _stepSimulator.Reset();
+
+        SetStatus("تمت إعادة ضبط خطوات المحاكاة التعليمية.", false);
+
+        await RefreshAsync();
+    }
+
+    private async Task ExitEducationalModeAsync()
+    {
+        _isEducationalMode = false;
+        _stepSimulator = null;
+
+        SetStatus("تمت العودة إلى المحاكاة الكاملة.", false);
+
+        await NotifyUserModificationAsync();
+    }
+
+    // ───────────────────────── مساعدات الواجهة ─────────────────────────
+
+    private void SetStatus(string message, bool isError)
+    {
+        _statusMessage = message;
+        _isErrorStatus = isError;
+    }
+
+    private string GetStatusCssClass()
+    {
+        if (_isErrorStatus || (Manager?.HasFeedbackLoop ?? false))
+            return "status-error";
+
+        if (_isEducationalMode)
+            return "status-edu";
+
+        return "status-normal";
+    }
+
+    private string GetCursorStyle()
+    {
+        if (_isPanning || _isPanMode)
+            return "grabbing";
+
+        if (_isDrawingTempWire)
+            return "crosshair";
+
+        if (_draggingGate != null)
+            return "move";
+
+        return "default";
     }
 }
