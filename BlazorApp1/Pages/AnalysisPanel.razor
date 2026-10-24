@@ -1,0 +1,10 @@
+﻿@using LogicCore.Management
+@code {
+    [Parameter]
+    public CircuitManager Manager { get; set; } = default!;
+
+    public void GenerateAnalysis()
+    {
+        StateHasChanged();
+    }
+}

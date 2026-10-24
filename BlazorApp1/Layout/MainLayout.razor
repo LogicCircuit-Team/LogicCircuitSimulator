@@ -1,0 +1,53 @@
+﻿```razor
+@inherits LayoutComponentBase
+
+<div class="app-layout" dir="ltr">
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">⚡</div>
+            <div>
+                <h2>LogicLab</h2>
+                <span>Circuit Simulator</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section-title">
+            WORKSPACE
+        </div>
+
+        <NavMenu />
+
+        <div class="sidebar-footer">
+            <span class="status-dot"></span>
+            <span>Simulator Ready</span>
+        </div>
+    </aside>
+
+    <main class="main-area">
+
+        <header class="topbar">
+            <div class="topbar-title">
+                <span class="topbar-eyebrow">DIGITAL ELECTRONICS</span>
+                <h1>Logic Circuit Simulator</h1>
+            </div>
+
+            <div class="topbar-status">
+                <span class="status-dot"></span>
+                Ready to simulate
+            </div>
+        </header>
+
+        <section class="page-content">
+            @Body
+        </section>
+
+        <footer class="app-footer">
+            <span>LogicLab</span>
+            <span>Digital Logic Design Workspace</span>
+        </footer>
+
+    </main>
+
+</div>
+```
