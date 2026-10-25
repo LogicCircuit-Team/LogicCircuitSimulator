@@ -1,4 +1,4 @@
-﻿using LogicCore.Management;
+using LogicCore.Management;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -115,7 +115,7 @@ namespace LogicCore.Serialization
 
 
             var manager = new CircuitManager();
-            var gatesById = new Dictionary<string, IGate>();
+            var gatesById = new Dictionary<string, IGate>(dto.Gates.Count, StringComparer.Ordinal);
 
             // Creates each gate and restores its saved properties.
 
@@ -131,8 +131,7 @@ namespace LogicCore.Serialization
                 if (gatesById.ContainsKey(gateDto.Id))
                     throw new JsonException($"Duplicate gate ID: {gateDto.Id}");
 
-                if (!double.IsFinite(gateDto.X) || !double.IsFinite(gateDto.Y) ||
-                     gateDto.X < 0 || gateDto.Y < 0) 
+                if (!double.IsFinite(gateDto.X) || !double.IsFinite(gateDto.Y)) 
                     throw new JsonException($"Invalid position for gate: {gateDto.Id}"); 
                 // Rejects an invalid position.
 
@@ -164,7 +163,7 @@ namespace LogicCore.Serialization
                     switchGate.State = gateDto.SwitchState ?? false;
                 }
 
-                manager.AddGate(gate);
+                manager.Gates.Add(gate);
                 gatesById.Add(gate.Id, gate);
 
             }
@@ -194,11 +193,14 @@ namespace LogicCore.Serialization
                     wireDto.TargetInputIndex >= targetGate.Inputs.Length) // Checks the target input.
                     throw new JsonException("The target input index is invalid.");
 
-                manager.AddWire(new Wire(sourceGate, targetGate, wireDto.TargetInputIndex));
+                manager.Wires.Add(new Wire(sourceGate, targetGate, wireDto.TargetInputIndex));
 
              
             }
 
+            var validation = manager.TrySimulate();
+            if (!validation.IsValid)
+                throw new JsonException(validation.Message);
             return manager;
 
         }

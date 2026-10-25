@@ -64,7 +64,8 @@
                         </div>
                         <div class="card-body">
                             <AnalysisPanel @ref="analysisPanel"
-                                           Manager="@sharedManager" />
+                                           Manager="@sharedManager"
+                                           OnCircuitChanged="RefreshAll" />
                         </div>
                     </aside>
 
@@ -88,6 +89,7 @@
         }
 
         RefreshAnalysis();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void RefreshAnalysis()

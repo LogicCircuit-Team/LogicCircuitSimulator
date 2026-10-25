@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using LogicCore.Gates;
@@ -10,7 +10,7 @@ namespace LogicCore.Analysis
 {
     public class VerilogTranslator
     {
-        private HashSet<string> reservedKeywords = new HashSet<string>
+        private static readonly HashSet<string> reservedKeywords = new HashSet<string>
         {
             "accept_on", "alias", "always", "always_comb", "always_ff",
 "always_latch", "and", "assert", "assign", "assume",
@@ -69,7 +69,7 @@ namespace LogicCore.Analysis
             List<Lamp> Lamps = new List<Lamp>();
             List<IGate> logicGates = new List<IGate>();
             List<string> portNames = new List<string>();
-            Dictionary<IGate, string> signalNames = new Dictionary<IGate, string>();
+            Dictionary<IGate, string> signalNames = new Dictionary<IGate, string>(ReferenceEqualityComparer.Instance);
             string signalType = string.Empty;
 
 
@@ -92,9 +92,9 @@ namespace LogicCore.Analysis
                 }
             }
 
-            switchs = switchs.OrderBy(x => x.Id).ToList();
-            Lamps = Lamps.OrderBy(x => x.Id).ToList();
-            logicGates = logicGates.OrderBy(x => x.Id).ToList();
+            switchs = switchs.OrderBy(x => x.Id, StringComparer.Ordinal).ToList();
+            Lamps = Lamps.OrderBy(x => x.Id, StringComparer.Ordinal).ToList();
+            logicGates = logicGates.OrderBy(x => x.Id, StringComparer.Ordinal).ToList();
 
             for (int inputIndex = 0; inputIndex < switchs.Count; inputIndex++)
             {
@@ -132,7 +132,13 @@ namespace LogicCore.Analysis
                 signalType = "wire";
             }
 
-            StringBuilder builder = new StringBuilder();
+            var inputSignalNames = new Dictionary<IGate, string[]>(manager.Gates.Count, ReferenceEqualityComparer.Instance);
+            foreach (var gate in manager.Gates)
+                inputSignalNames.Add(gate, new string[gate.Inputs.Length]);
+            foreach (var wire in manager.Wires)
+                inputSignalNames[wire.TargetGate][wire.TargetInputIndex] = signalNames[wire.SourceGate];
+
+            StringBuilder builder = new StringBuilder(256 + manager.Gates.Count * 80);
 
             builder.AppendLine("module " + moduleName + "(" + portsText + ");");
 
@@ -156,7 +162,7 @@ namespace LogicCore.Analysis
                 List<string> inputSignals = new List<string>();
                 for (int i = 0; i < gateItem.Inputs.Length; i++)
                 {
-                    inputSignals.Add(GetInputSignalName(manager, gateItem, i, signalNames));
+                    inputSignals.Add(GetInputSignalName(gateItem, i, inputSignalNames));
                 }
 
                 string expression = string.Empty;
@@ -202,7 +208,7 @@ namespace LogicCore.Analysis
 
             foreach (var lampItem in Lamps)
             {
-                string sourceName = GetInputSignalName(manager, lampItem, 0, signalNames);
+                string sourceName = GetInputSignalName(lampItem, 0, inputSignalNames);
                 builder.AppendLine("assign " + signalNames[lampItem] + " = " + sourceName + ";");
             }
 
@@ -211,28 +217,14 @@ namespace LogicCore.Analysis
             return builder.ToString();
         }
 
-        private string GetInputSignalName(CircuitManager manager, IGate targetGate, int inputIndex, Dictionary<IGate, string> signalNames)
+        private string GetInputSignalName(IGate targetGate, int inputIndex, Dictionary<IGate, string[]> inputSignals)
         {
-            var matchingWires = manager.Wires.Where(x => x.TargetGate == targetGate && x.TargetInputIndex == inputIndex).ToList();
-
-            if (matchingWires.Count == 0)
-            {
-                throw new InvalidOperationException($"Input {inputIndex} on gate {targetGate.Id} is not connected");
-            }
-            if (matchingWires.Count > 1)
-            {
-                throw new InvalidOperationException($"More than one wire connected to input {inputIndex} on gate {targetGate.Id}.");
-            }
-
-            IGate sourceGate = matchingWires[0].SourceGate;
-
-            if (!signalNames.ContainsKey(sourceGate))
-            {
-                throw new InvalidOperationException($"Source gate {sourceGate.Id} was not found in signal definitions.");
-            }
-
-            return signalNames[sourceGate];
+            if (!inputSignals.TryGetValue(targetGate, out var inputs) ||
+                inputIndex < 0 || inputIndex >= inputs.Length || string.IsNullOrWhiteSpace(inputs[inputIndex]))
+                throw new InvalidOperationException($"Input {inputIndex} on gate '{targetGate.Id}' has no signal.");
+            return inputs[inputIndex];
         }
+
         private void ValidateModuleName(string moduleName)
         {
             if (string.IsNullOrWhiteSpace(moduleName))

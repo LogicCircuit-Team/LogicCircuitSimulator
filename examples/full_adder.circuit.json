@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "gates": [
+    {
+      "id": "input_a",
+      "gateType": "SWITCH",
+      "x": 40,
+      "y": 80,
+      "switchState": false
+    },
+    {
+      "id": "input_b",
+      "gateType": "SWITCH",
+      "x": 40,
+      "y": 240,
+      "switchState": false
+    },
+    {
+      "id": "input_cin",
+      "gateType": "SWITCH",
+      "x": 40,
+      "y": 400,
+      "switchState": false
+    },
+    {
+      "id": "gate_xor1",
+      "gateType": "XOR",
+      "x": 250,
+      "y": 100
+    },
+    {
+      "id": "gate_xor2",
+      "gateType": "XOR",
+      "x": 450,
+      "y": 100
+    },
+    {
+      "id": "gate_and1",
+      "gateType": "AND",
+      "x": 250,
+      "y": 290
+    },
+    {
+      "id": "gate_and2",
+      "gateType": "AND",
+      "x": 450,
+      "y": 290
+    },
+    {
+      "id": "gate_or1",
+      "gateType": "OR",
+      "x": 650,
+      "y": 290
+    },
+    {
+      "id": "output_sum",
+      "gateType": "LAMP",
+      "x": 850,
+      "y": 100
+    },
+    {
+      "id": "output_cout",
+      "gateType": "LAMP",
+      "x": 850,
+      "y": 290
+    }
+  ],
+  "wires": [
+    {
+      "sourceGateId": "input_a",
+      "targetGateId": "gate_xor1",
+      "targetInputIndex": 0
+    },
+    {
+      "sourceGateId": "input_b",
+      "targetGateId": "gate_xor1",
+      "targetInputIndex": 1
+    },
+    {
+      "sourceGateId": "gate_xor1",
+      "targetGateId": "gate_xor2",
+      "targetInputIndex": 0
+    },
+    {
+      "sourceGateId": "input_cin",
+      "targetGateId": "gate_xor2",
+      "targetInputIndex": 1
+    },
+    {
+      "sourceGateId": "input_a",
+      "targetGateId": "gate_and1",
+      "targetInputIndex": 0
+    },
+    {
+      "sourceGateId": "input_b",
+      "targetGateId": "gate_and1",
+      "targetInputIndex": 1
+    },
+    {
+      "sourceGateId": "gate_xor1",
+      "targetGateId": "gate_and2",
+      "targetInputIndex": 0
+    },
+    {
+      "sourceGateId": "input_cin",
+      "targetGateId": "gate_and2",
+      "targetInputIndex": 1
+    },
+    {
+      "sourceGateId": "gate_and1",
+      "targetGateId": "gate_or1",
+      "targetInputIndex": 0
+    },
+    {
+      "sourceGateId": "gate_and2",
+      "targetGateId": "gate_or1",
+      "targetInputIndex": 1
+    },
+    {
+      "sourceGateId": "gate_xor2",
+      "targetGateId": "output_sum",
+      "targetInputIndex": 0
+    },
+    {
+      "sourceGateId": "gate_or1",
+      "targetGateId": "output_cout",
+      "targetInputIndex": 0
+    }
+  ]
+}

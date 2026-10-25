@@ -1,10 +1,7 @@
-﻿using System;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 using System.Text.Json;
-namespace BlazorApp1.Services
 
+namespace BlazorApp1.Services
 {
     public class HdlImportClient
     {
@@ -15,49 +12,50 @@ namespace BlazorApp1.Services
             httpClient = client;
         }
 
-        private Task<HttpResponseMessage> SendRequestAsync(HdlSynthesisRequest request)
+        private Task<HttpResponseMessage> SendRequestAsync(HdlSynthesisRequest request, CancellationToken cancellationToken)
         {
-            return httpClient.PostAsJsonAsync("/api/hdl/synthesize", request);
+            return httpClient.PostAsJsonAsync("api/hdl/synthesize", request, cancellationToken);
         }
 
-        public async Task<HdlSynthesisResponse> SynthesizeAsync(HdlSynthesisRequest request)
+        public async Task<HdlSynthesisResponse> SynthesizeAsync(
+            HdlSynthesisRequest request, CancellationToken cancellationToken = default)
         {
-            using var response = await SendRequestAsync(request);
-
-            HdlSynthesisResponse? result;
-
+            ArgumentNullException.ThrowIfNull(request);
             try
             {
-                result = await response.Content.ReadFromJsonAsync<HdlSynthesisResponse>();
-            }
-            catch (JsonException)
-            {
-                throw new InvalidOperationException("The HDL service returned an invalid JSON response.");
-            }
-
-            if (result == null)
-            {
-                throw new InvalidOperationException("The HDL service returned no result.");
-            }
-
-            if (response.IsSuccessStatusCode == false)
-            {
-                string message = result.Diagnostics;
-
-                if (string.IsNullOrWhiteSpace(message))
+                using var response = await SendRequestAsync(request, cancellationToken);
+                HdlSynthesisResponse? result;
+                try
                 {
-                    message = $"The synthesis operation failed with status code: {response.StatusCode}";
+                    result = await response.Content.ReadFromJsonAsync<HdlSynthesisResponse>(cancellationToken: cancellationToken);
+                }
+                catch (JsonException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"The HDL service returned HTTP {(int)response.StatusCode} ({response.StatusCode}) at {response.RequestMessage?.RequestUri} without the expected JSON response. Check ApiBaseUrl and make sure CircuitApi is running.", ex);
                 }
 
-                throw new InvalidOperationException(message);
+                if (!response.IsSuccessStatusCode)
+                {
+                    string message = result?.Diagnostics ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(message))
+                        message = $"The HDL request failed with HTTP {(int)response.StatusCode} ({response.StatusCode}).";
+                    throw new InvalidOperationException(message);
+                }
+                if (result == null)
+                    throw new InvalidOperationException("The HDL service returned no result.");
+                if (string.IsNullOrWhiteSpace(result.NetlistJson))
+                    throw new InvalidOperationException("The HDL service did not return a netlist.");
+                return result;
             }
-
-            if (string.IsNullOrWhiteSpace(result.NetlistJson))
+            catch (HttpRequestException ex)
             {
-                throw new InvalidOperationException("The service did not return a Netlist.");
+                throw new InvalidOperationException("Unable to reach the HDL API. Start CircuitApi and check ApiBaseUrl, HTTPS and CORS settings.", ex);
             }
-
-            return result;
+            catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new InvalidOperationException("The HDL request timed out. Check the API and Yosys configuration.", ex);
+            }
         }
     }
 
@@ -70,7 +68,6 @@ namespace BlazorApp1.Services
     public class HdlSynthesisResponse
     {
         public string NetlistJson { get; set; } = string.Empty;
-        // متغير لازم مع العضو الثالث مالك api
         public string Diagnostics { get; set; } = string.Empty;
     }
 }
