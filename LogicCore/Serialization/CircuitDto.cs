@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,9 +8,12 @@ namespace LogicCore.Serialization
    public sealed class CircuitDto
     {
         ///SchemaVersion
-        public int SchemaVersion { get; set; } = 1; 
-        public List<GateDto> Gates { get; set; }= new();
-        public List<WireDto> Wires { get; set; }= new();
+        [JsonRequired]
+         public int SchemaVersion { get; set; } = 1; 
+        [JsonRequired]
+         public List<GateDto> Gates { get; set; }= new();
+        [JsonRequired]
+         public List<WireDto> Wires { get; set; }= new();
 
     }
 

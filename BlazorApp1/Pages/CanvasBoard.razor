@@ -17,9 +17,9 @@
 <div class="canvas-board-wrapper">
     <div class="board-toolbar">
         <div class="tool-group">
-            <button class="btn-tool" title="تكبير" @onclick="ZoomInAsync">🔍 +</button>
-            <button class="btn-tool" title="تصغير" @onclick="ZoomOutAsync">🔍 −</button>
-            <button class="btn-tool" title="إعادة ضبط العرض" @onclick="ResetViewAsync">
+            <button class="btn-tool" title="Zoom in" @onclick="ZoomInAsync">🔍 +</button>
+            <button class="btn-tool" title="Zoom out" @onclick="ZoomOutAsync">🔍 −</button>
+            <button class="btn-tool" title="Reset view" @onclick="ResetViewAsync">
                 @($"{_zoom * 100:0}%")
             </button>
         </div>
@@ -27,17 +27,17 @@
         <div class="tool-group">
             <button class="btn-tool @(_isPanMode ? "active-mode" : "")"
                     @onclick="TogglePanMode">
-                ✋ تحريك اللوحة
+                Pan board
             </button>
 
             <button class="btn-tool btn-danger-outline"
                     @onclick="DeleteSelectedAsync"
                     disabled="@(_selectedGate == null && _selectedWire == null)">
-                🗑️ حذف المحدد
+                Delete selected
             </button>
 
             <button class="btn-tool btn-danger-solid" @onclick="ClearBoardAsync">
-                🧹 مسح الكل
+                Clear board
             </button>
         </div>
 
@@ -45,21 +45,21 @@
             @if (!_isEducationalMode)
             {
                 <button class="btn-tool btn-edu" @onclick="StartEducationalModeAsync">
-                    🎓 الوضع التعليمي
+                    Step mode
                 </button>
             }
             else
             {
                 <button class="btn-tool btn-step" @onclick="ExecuteNextStepAsync">
-                    ⏭️ الخطوة التالية (@(_stepSimulator?.StepCount ?? 0))
+                    Next step (@(_stepSimulator?.StepCount ?? 0))
                 </button>
 
                 <button class="btn-tool" @onclick="ResetEducationalAsync">
-                    🔄 تصفير الخطوات
+                    Reset steps
                 </button>
 
                 <button class="btn-tool btn-exit-edu" @onclick="ExitEducationalModeAsync">
-                    ⚡ تشغيل كامل
+                    Run simulation
                 </button>
             }
         </div>
@@ -75,7 +75,7 @@
 
         @if (Manager?.HasFeedbackLoop == true)
         {
-            <span class="validation-alert">⚠️ توجد حلقة راجعة في الدارة</span>
+            <span class="validation-alert">Feedback loop detected</span>
         }
     </div>
 
@@ -101,10 +101,10 @@
         <div class="educational-panel">
             <div class="edu-header">
                 <strong>@_stepSimulator.LastActionDescription</strong>
-                <span class="badge-stable">الخطوة @_stepSimulator.StepCount</span>
+                <span class="badge-stable">Step @_stepSimulator.StepCount</span>
             </div>
 
-            <div>مرحلة المحاكاة: @_stepSimulator.CurrentStage</div>
+            <div>Simulation stage: @_stepSimulator.CurrentStage</div>
         </div>
     }
 </div>
@@ -174,7 +174,7 @@
     private string? _validationMessage;
 
     private string _statusMessage =
-        "اسحب من مخرج البوابة إلى مدخل بوابة أخرى للتوصيل. انقر على SWITCH لتغيير حالته.";
+        "Drag an output pin to an input pin to connect gates. Click a switch to toggle its state.";
 
     private bool _isErrorStatus;
 
@@ -223,10 +223,7 @@
     {
         try
         {
-            var size = await JS.InvokeAsync<double[]>(
-                "eval",
-                $"(function(){{var e=document.getElementById('{_viewportId}');" +
-                "if(!e)return [0,0];return [e.clientWidth,e.clientHeight];})()");
+            var size = await JS.InvokeAsync<double[]>("circuitUi.measure", _viewportId);
 
             if (size == null || size.Length < 2)
                 return;
@@ -266,6 +263,7 @@
         {
             do
             {
+                await JS.InvokeVoidAsync("circuitUi.nextFrame");
                 _renderPending = false;
                 await DrawCanvasAsync();
             }
@@ -286,7 +284,7 @@
             ResetInteractionState();
             _observedManager = Manager;
             _refreshCircuitAfterRender = false;
-            SetStatus("تم تحديث الدارة.", false);
+            SetStatus("Circuit updated.", false);
             await SimulateAndRefreshAsync();
         });
     }
@@ -300,7 +298,7 @@
         _validationMessage = result.IsValid ? null : result.Message;
 
         if (!result.IsValid)
-            SetStatus("تعذر حساب الدارة. صحّح التوصيلات المشار إليها.", true);
+            SetStatus("The circuit could not be evaluated. Check its connections.", true);
 
         if (_canvasRef == null)
             _redrawAfterRender = true;
@@ -424,8 +422,8 @@
             }
         }
 
-        await using var ctx = await _canvasRef.GetContext2DAsync();
-        await using var batch = ctx.CreateBatch();
+        await using var context = await _canvasRef.GetContext2DAsync();
+        await using var ctx = context.CreateBatch();
 
         await ctx.SaveAsync();
 
@@ -452,7 +450,7 @@
         await ctx.RestoreAsync();
     }
 
-    private async Task DrawGridAsync(Context2D ctx)
+    private async Task DrawGridAsync(IContext2DWithoutGetters ctx)
     {
         double startX = Math.Floor((-_panX / _zoom) / GridSize) * GridSize - GridSize;
         double startY = Math.Floor((-_panY / _zoom) / GridSize) * GridSize - GridSize;
@@ -481,7 +479,7 @@
 
     // ───────────────────────── الأسلاك ─────────────────────────
 
-    private async Task DrawWireAsync(Context2D ctx, Wire wire)
+    private async Task DrawWireAsync(IContext2DWithoutGetters ctx, Wire wire)
     {
         if (wire.SourceGate == null || wire.TargetGate == null)
             return;
@@ -507,7 +505,7 @@
         await ctx.StrokeAsync();
     }
 
-    private async Task DrawTemporaryWireAsync(Context2D ctx)
+    private async Task DrawTemporaryWireAsync(IContext2DWithoutGetters ctx)
     {
         if (_wiringSourceGate == null)
             return;
@@ -547,7 +545,7 @@
 
     // ───────────────────────── البوابات (رموز ANSI بدون صناديق) ─────────────────────────
 
-    private async Task DrawGateAsync(Context2D ctx, IGate gate)
+    private async Task DrawGateAsync(IContext2DWithoutGetters ctx, IGate gate)
     {
         bool selected =
             ReferenceEquals(gate, _selectedGate) ||
@@ -627,7 +625,7 @@
     }
 
     private async Task DrawPinAsync(
-        Context2D ctx,
+        IContext2DWithoutGetters ctx,
         double x,
         double y,
         bool value,
@@ -695,7 +693,7 @@
     }
 
     private async Task DrawLogicSymbolAsync(
-        Context2D ctx,
+        IContext2DWithoutGetters ctx,
         IGate gate,
         string type,
         string stroke)
@@ -794,7 +792,7 @@
             await DrawInversionBubbleAsync(ctx, tipX + BubbleRadius, mid, stroke);
     }
 
-    private async Task DrawInversionBubbleAsync(Context2D ctx, double x, double y, string stroke)
+    private async Task DrawInversionBubbleAsync(IContext2DWithoutGetters ctx, double x, double y, string stroke)
     {
         await ctx.BeginPathAsync();
         await ctx.StrokeStyleAsync(stroke);
@@ -804,7 +802,7 @@
     }
 
     // SWITCH: مفتاح منزلق (Toggle) أنيق.
-    private async Task DrawSwitchSymbolAsync(Context2D ctx, IGate gate, bool selected)
+    private async Task DrawSwitchSymbolAsync(IContext2DWithoutGetters ctx, IGate gate, bool selected)
     {
         double cx = gate.X + 50;
         double cy = gate.Y + GateHeight / 2;
@@ -861,7 +859,7 @@
     }
 
     // LAMP: مصباح دائري متوهج بدون أي صندوق.
-    private async Task DrawLampSymbolAsync(Context2D ctx, IGate gate, string stroke)
+    private async Task DrawLampSymbolAsync(IContext2DWithoutGetters ctx, IGate gate, string stroke)
     {
         double cx = gate.X + 58;
         double cy = gate.Y + GateHeight / 2;
@@ -960,7 +958,7 @@
                     RemoveWireSafely(connected);
                     _selectedWire = null;
 
-                    SetStatus($"تم فصل السلك عن In{pinIndex}.", false);
+                    SetStatus($"Disconnected the wire from input {pinIndex}.", false);
                     await NotifyUserModificationAsync();
                     return;
                 }
@@ -973,7 +971,7 @@
                 string type = gateToDelete.GateType;
                 RemoveGateSafely(gateToDelete);
 
-                SetStatus($"تم حذف البوابة {type}.", false);
+                SetStatus($"Deleted gate {type}.", false);
                 await NotifyUserModificationAsync();
                 return;
             }
@@ -985,7 +983,7 @@
                 RemoveWireSafely(wireToDelete);
                 _selectedWire = null;
 
-                SetStatus("تم حذف السلك.", false);
+                SetStatus("Wire deleted.", false);
                 await NotifyUserModificationAsync();
             }
 
@@ -1009,7 +1007,7 @@
             _selectedGate = source;
             _selectedWire = null;
 
-            SetStatus($"بدأ التوصيل من {source.GateType}. اسحب إلى مدخل البوابة المطلوبة.", false);
+            SetStatus($"Connecting from {source.GateType}. Drag to a target input pin.", false);
 
             await RefreshAsync();
             return;
@@ -1039,7 +1037,7 @@
             _selectedWire = clickedWire;
             _selectedGate = null;
 
-            SetStatus("تم تحديد السلك. يمكنك حذفه بزر الحذف.", false);
+            SetStatus("Wire selected. Use Delete selected to remove it.", false);
             await RefreshAsync();
             return;
         }
@@ -1189,7 +1187,7 @@
 
             ResetWiringState();
 
-            SetStatus("لم يتم التوصيل. اسحب السلك إلى مدخل صالح.", false);
+            SetStatus("No connection was made. Drag to a valid input pin.", false);
             await RefreshAsync();
             return;
         }
@@ -1204,14 +1202,14 @@
                 gate.X = SnapToGrid(gate.X);
                 gate.Y = SnapToGrid(gate.Y);
 
-                SetStatus($"تم نقل {gate.GateType} إلى ({gate.X:0}, {gate.Y:0}).", false);
+                SetStatus($"Moved {gate.GateType} to ({gate.X:0}, {gate.Y:0}).", false);
                 await NotifyUserModificationAsync();
             }
             else if (gate is Switch sw)
             {
                 sw.Toggle();
 
-                SetStatus($"تم تغيير المفتاح إلى {(sw.State ? "ON (1)" : "OFF (0)")}.", false);
+                SetStatus($"Switch changed to {(sw.State ? "ON (1)" : "OFF (0)")}.", false);
                 await NotifyUserModificationAsync();
             }
             else
@@ -1266,7 +1264,7 @@
 
         if (!validation.IsValid)
         {
-            RejectConnection($"رفض التوصيل: {validation.Message}");
+            RejectConnection($"Connection rejected: {validation.Message}");
             await RefreshAsync();
             return;
         }
@@ -1275,7 +1273,7 @@
         ResetWiringState();
 
         SetStatus(
-            $"تم التوصيل: {source.GateType} → {target.GateType} (In{targetInputIndex}).",
+            $"Connected: {source.GateType} → {target.GateType} (In{targetInputIndex}).",
             false);
 
         await NotifyUserModificationAsync();
@@ -1509,7 +1507,7 @@
         _isPanMode = !_isPanMode;
 
         SetStatus(
-            _isPanMode ? "وضع تحريك اللوحة مفعل." : "وضع تحريك اللوحة متوقف.",
+            _isPanMode ? "Pan mode enabled." : "Pan mode disabled.",
             false);
     }
 
@@ -1525,7 +1523,7 @@
             RemoveWireSafely(_selectedWire);
             _selectedWire = null;
 
-            SetStatus("تم حذف السلك المحدد.", false);
+            SetStatus("Selected wire deleted.", false);
             await NotifyUserModificationAsync();
             return;
         }
@@ -1537,7 +1535,7 @@
             RemoveGateSafely(_selectedGate);
             _selectedGate = null;
 
-            SetStatus($"تم حذف {type} والأسلاك المتصلة بها.", false);
+            SetStatus($"Deleted {type} and its attached wires.", false);
             await NotifyUserModificationAsync();
         }
     }
@@ -1551,7 +1549,7 @@
 
         ResetInteractionState();
 
-        SetStatus("تم مسح جميع البوابات والأسلاك.", false);
+        SetStatus("All gates and wires cleared.", false);
 
         await NotifyUserModificationAsync();
     }
@@ -1565,7 +1563,7 @@
         _stepSimulator = new StepSimulator(Manager);
         _stepSimulator.Reset();
 
-        SetStatus("بدأ الوضع التعليمي. اضغط الخطوة التالية لمتابعة المحاكاة.", false);
+        SetStatus("Step mode started. Use Next step to continue.", false);
 
         await RefreshAsync();
     }
@@ -1594,7 +1592,7 @@
         _stepSimulator ??= new StepSimulator(Manager);
         _stepSimulator.Reset();
 
-        SetStatus("تمت إعادة ضبط خطوات المحاكاة التعليمية.", false);
+        SetStatus("Simulation steps reset.", false);
 
         await RefreshAsync();
     }
@@ -1604,7 +1602,7 @@
         _isEducationalMode = false;
         _stepSimulator = null;
 
-        SetStatus("تمت العودة إلى المحاكاة الكاملة.", false);
+        SetStatus("Full simulation resumed.", false);
 
         await NotifyUserModificationAsync();
     }

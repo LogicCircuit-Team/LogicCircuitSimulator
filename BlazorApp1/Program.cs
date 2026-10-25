@@ -14,14 +14,21 @@ builder.Services.AddScoped(sp =>
         BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
     });
 
-builder.Services.AddScoped<CircuitApiClient>(sp =>
+var configuredApiAddress = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7178/";
+if (!Uri.TryCreate(configuredApiAddress.TrimEnd('/') + "/", UriKind.Absolute, out var apiAddress) ||
+    (apiAddress.Scheme != Uri.UriSchemeHttp && apiAddress.Scheme != Uri.UriSchemeHttps))
 {
-    var http = new HttpClient
-    {
-        BaseAddress = new Uri("https://localhost:7178/")
-    };
+    throw new InvalidOperationException("ApiBaseUrl must be an absolute HTTP or HTTPS address.");
+}
 
-    return new CircuitApiClient(http);
-});
+builder.Services.AddScoped<CircuitApiClient>(_ =>
+    new CircuitApiClient(new HttpClient { BaseAddress = apiAddress }));
+
+builder.Services.AddScoped<HdlImportClient>(_ =>
+    new HdlImportClient(new HttpClient
+    {
+        BaseAddress = apiAddress,
+        Timeout = TimeSpan.FromSeconds(45)
+    }));
 
 await builder.Build().RunAsync();

@@ -3,7 +3,7 @@
 @using BlazorApp1.Services
 @using System.Net.Http
 
-@inject HttpClient Http
+@inject HdlImportClient ImportClient
 
 <div class="d-flex flex-column gap-3">
 
@@ -364,32 +364,19 @@
 
         try
         {
-            HdlImportClient importClient = new HdlImportClient(Http);
-
             HdlSynthesisRequest request = new HdlSynthesisRequest
             {
                 Source = hdlText,
                 TopModule = importTopModule
             };
 
-            HdlSynthesisResponse result = await importClient.SynthesizeAsync(request);
+            HdlSynthesisResponse result = await ImportClient.SynthesizeAsync(request);
 
             importDiagnostics = result.Diagnostics;
 
             CircuitManager temporaryManager = adapter.ImportFromJson(result.NetlistJson, request.TopModule);
 
-            Manager.Wires.Clear();
-            Manager.Gates.Clear();
-
-            foreach (var gate in temporaryManager.Gates)
-            {
-                Manager.AddGate(gate);
-            }
-
-            foreach (var wire in temporaryManager.Wires)
-            {
-                Manager.AddWire(wire);
-            }
+            Manager.ReplaceWith(temporaryManager);
 
             rows.Clear();
             errorMessage = string.Empty;

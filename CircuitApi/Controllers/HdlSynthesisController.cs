@@ -16,6 +16,7 @@ namespace CircuitApi.Controllers
         }
 
         [HttpPost("synthesize")]
+        [RequestSizeLimit(1000000)]
         public async Task<ActionResult<HdlSynthesisResponse>> Synthesize(
             [FromBody] HdlSynthesisRequest request,
             CancellationToken cancellationToken)

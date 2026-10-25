@@ -1,4 +1,4 @@
-﻿using CircuitApi.Contracts;
+using CircuitApi.Contracts;
 using CircuitApi.Data;
 using CircuitApi.Models;
 using LogicCore.Serialization;
@@ -41,7 +41,7 @@ namespace CircuitApi.Controllers
                 CircuitSerializer.FromJsonToManager(request.JsonData);
             }
 
-            catch (JsonException ex) 
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException) 
             {
             
                 return BadRequest(new { message = ex.Message });
@@ -130,7 +130,7 @@ namespace CircuitApi.Controllers
                 // Checks that the JSON contains valid circuit data.
                 CircuitSerializer.FromJsonToManager(request.JsonData);
             }
-            catch (JsonException ex)
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException)
             {
                 return BadRequest(new { message = ex.Message });
             }

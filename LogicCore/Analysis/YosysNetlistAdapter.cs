@@ -1,4 +1,4 @@
-﻿using LogicCore.Connections;
+using LogicCore.Connections;
 using LogicCore.Core;
 using LogicCore.Gates;
 using LogicCore.Interfaces;
@@ -147,7 +147,7 @@ namespace LogicCore.Analysis
                         throw new InvalidOperationException($"Signal bit '{bitId}' already has a source. Multiple sources are not allowed.");
                     }
 
-                    temporaryManager.AddGate(switchItem);
+                    temporaryManager.Gates.Add(switchItem);
                     signalSources.Add(bitId, switchItem);
                     inputIndex++;
                 }
@@ -160,7 +160,7 @@ namespace LogicCore.Analysis
                         Y = 80 + outputIndex * 100
                     };
 
-                    temporaryManager.AddGate(lampItem);
+                    temporaryManager.Gates.Add(lampItem);
                     outputBits.Add(lampItem, bitId);
                     outputIndex++;
                 }
@@ -221,7 +221,7 @@ namespace LogicCore.Analysis
                 }
 
                 signalSources.Add(outputBitId, gate);
-                temporaryManager.AddGate(gate);
+                temporaryManager.Gates.Add(gate);
                 cellGates.Add(cellName, gate);
                 gateIndex++;
             }
@@ -251,7 +251,7 @@ namespace LogicCore.Analysis
                     }
 
                     Wire wire = new Wire(sourceGate, targetGate, pinIndex);
-                    temporaryManager.AddWire(wire);
+                    temporaryManager.Wires.Add(wire);
                 }
             }
 
@@ -266,7 +266,7 @@ namespace LogicCore.Analysis
                 }
 
                 Wire wire = new Wire(sourceGate, lamp, 0);
-                temporaryManager.AddWire(wire);
+                temporaryManager.Wires.Add(wire);
             }
 
             ValidateNoCycles(temporaryManager);
@@ -277,50 +277,9 @@ namespace LogicCore.Analysis
 
         private void ValidateNoCycles(CircuitManager manager)
         {
-            Dictionary<IGate, int> incomingWireCounts = new Dictionary<IGate, int>();
-            foreach (var gate in manager.Gates)
-            {
-                incomingWireCounts[gate] = 0;
-            }
-
-            foreach (var wire in manager.Wires)
-            {
-                incomingWireCounts[wire.TargetGate]++;
-            }
-
-            Queue<IGate> readyGates = new Queue<IGate>();
-            foreach (var kvp in incomingWireCounts)
-            {
-                if (kvp.Value == 0)
-                {
-                    readyGates.Enqueue(kvp.Key);
-                }
-            }
-
-            int processedGateCount = 0;
-
-            while (readyGates.Count > 0)
-            {
-                IGate currentGate = readyGates.Dequeue();
-                processedGateCount++;
-
-                foreach (var wire in manager.Wires)
-                {
-                    if (wire.SourceGate == currentGate)
-                    {
-                        incomingWireCounts[wire.TargetGate]--;
-                        if (incomingWireCounts[wire.TargetGate] == 0)
-                        {
-                            readyGates.Enqueue(wire.TargetGate);
-                        }
-                    }
-                }
-            }
-
-            if (processedGateCount != manager.Gates.Count)
-            {
-                throw new InvalidOperationException("The imported circuit contains a cycle. Feedback connections are not supported.");
-            }
+            var result = manager.TryValidate();
+            if (!result.IsValid)
+                throw new InvalidOperationException(result.Message);
         }
 
         private void ValidateCellConnections(string cellName, IGate gate, JsonElement connectionsElement)

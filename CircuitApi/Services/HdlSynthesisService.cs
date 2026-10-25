@@ -1,67 +1,50 @@
-﻿using CircuitApi.Contracts;
-using System;
+using CircuitApi.Contracts;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+
 namespace CircuitApi.Services
 {
     public class HdlSynthesisService : IHdlSynthesisService
-    { 
-        private const string EnvironmentScript=
-                 @"C:\Users\zim\tools\oss-cad-suite-windows-x64-20261020\oss-cad-suite\environment.ps1";
+    {
+        private static readonly Regex ModuleNamePattern = new(
+            @"^[A-Za-z_][A-Za-z0-9_$]*$", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        private readonly string environmentScript;
+        private readonly int timeoutSeconds;
+        private readonly int maxSourceCharacters;
+        private readonly ILogger<HdlSynthesisService> logger;
 
+        public HdlSynthesisService(IConfiguration configuration, ILogger<HdlSynthesisService> logger)
+        {
+            environmentScript = Environment.ExpandEnvironmentVariables(
+                configuration["HdlSynthesis:EnvironmentScript"] ?? string.Empty);
+            timeoutSeconds = Math.Clamp(configuration.GetValue("HdlSynthesis:TimeoutSeconds", 30), 1, 300);
+            maxSourceCharacters = Math.Clamp(configuration.GetValue("HdlSynthesis:MaxSourceCharacters", 100000), 1, 1000000);
+            this.logger = logger;
+        }
 
         public async Task<HdlSynthesisResponse> SynthesizeAsync(
-           HdlSynthesisRequest request,
-           CancellationToken cancellationToken)
+            HdlSynthesisRequest request, CancellationToken cancellationToken)
         {
-            // Checks that the request exists.
             ArgumentNullException.ThrowIfNull(request);
-
             if (string.IsNullOrWhiteSpace(request.Source))
-            {
-                return new HdlSynthesisResponse
-                {
-                    Diagnostics = "The source code is required."
-                };
-            }
+                return Failure("The source code is required.");
+            if (request.Source.Length > maxSourceCharacters)
+                return Failure($"HDL source cannot exceed {maxSourceCharacters} characters.");
+            if (string.IsNullOrWhiteSpace(request.TopModule) || !ModuleNamePattern.IsMatch(request.TopModule))
+                return Failure("The top module name is invalid.");
+            if (string.IsNullOrWhiteSpace(environmentScript) || !File.Exists(environmentScript))
+                return Failure("Set HdlSynthesis:EnvironmentScript in CircuitApi/appsettings.json to the OSS CAD Suite environment.ps1 file on the API computer.");
 
-            // Allows simple module names and prevents invalid Yosys commands.
-            if (!Regex.IsMatch(request.TopModule, @"^[A-Za-z_][A-Za-z0-9_$]*$"))
-            {
-                return new HdlSynthesisResponse
-                {
-                    Diagnostics = "The top module name is invalid."
-                };
-            }
-
-            if (!File.Exists(EnvironmentScript)) 
-            {
-                return new HdlSynthesisResponse
-                {
-                    Diagnostics = $"Yosys setup script was not found: {EnvironmentScript}"
-                };
-            }
-
-            var workingFolder = Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N"));
-
+            string workingFolder = Path.Combine(Path.GetTempPath(), "LogicCircuitSimulator", Guid.NewGuid().ToString("N"));
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
             try
             {
                 Directory.CreateDirectory(workingFolder);
-                // Saves the submitted SystemVerilog source
-                var sourcePath = Path.Combine(workingFolder, "input.sv");
-
-
-                await File.WriteAllTextAsync(
-                sourcePath,
-                request.Source,
-                new UTF8Encoding(false),
-                cancellationToken);
-
-                var yosysScript = $"""
+                await File.WriteAllTextAsync(Path.Combine(workingFolder, "input.sv"), request.Source,
+                    new UTF8Encoding(false), linked.Token);
+                string yosysScript = $"""
                     read_slang input.sv
                     hierarchy -top {request.TopModule}
                     proc
@@ -71,135 +54,90 @@ namespace CircuitApi.Services
                     opt
                     write_json netlist.json
                     """;
-                var yosysScriptPath = Path.Combine(workingFolder, "synthesis.ys");
-
-                await File.WriteAllTextAsync(
-                   yosysScriptPath,
-                   yosysScript,
-                   cancellationToken);
+                await File.WriteAllTextAsync(Path.Combine(workingFolder, "synthesis.ys"), yosysScript, linked.Token);
 
                 var startInfo = new ProcessStartInfo
                 {
-
                     FileName = "powershell.exe",
                     WorkingDirectory = workingFolder,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true,
+                    CreateNoWindow = true
                 };
-
-
                 startInfo.ArgumentList.Add("-NoProfile");
                 startInfo.ArgumentList.Add("-NonInteractive");
                 startInfo.ArgumentList.Add("-ExecutionPolicy");
                 startInfo.ArgumentList.Add("Bypass");
                 startInfo.ArgumentList.Add("-Command");
+                string quotedPath = environmentScript.Replace("'", "''");
+                startInfo.ArgumentList.Add($"$ErrorActionPreference = 'Stop'; . '{quotedPath}'; yosys -Q -s synthesis.ys; exit $LASTEXITCODE");
 
-                // Loads the environment and runs the Yosys script.
-                var scriptPath = EnvironmentScript.Replace("'", "''");
-                startInfo.ArgumentList.Add($". '{scriptPath}'; yosys -Q -s synthesis.ys");
-
-
-
-                // Starts the Yosys process.
-                using var process = new Process
-                {
-                    StartInfo = startInfo
-
-                };
+                using var process = new Process { StartInfo = startInfo };
                 process.Start();
-
-
-
-                var outputTask = process.StandardOutput.ReadToEndAsync();
-                var errorTask = process.StandardError.ReadToEndAsync();
-                // Waits until Yosys finishes or the request is cancelled.
+                Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+                Task<string> errorTask = process.StandardError.ReadToEndAsync();
                 try
                 {
-                    await process.WaitForExitAsync(cancellationToken);
+                    await process.WaitForExitAsync(linked.Token);
                 }
                 catch (OperationCanceledException)
                 {
-                    // Stops Yosys if the request was cancelled.
                     if (!process.HasExited)
-                    {
                         process.Kill(entireProcessTree: true);
+                    try
+                    {
+                        await Task.WhenAll(outputTask, errorTask).WaitAsync(TimeSpan.FromSeconds(5));
                     }
-
+                    catch (Exception ex) when (ex is TimeoutException or IOException or ObjectDisposedException)
+                    {
+                        logger.LogDebug(ex, "Output capture stopped after synthesis cancellation.");
+                    }
                     throw;
                 }
 
-                // Gets the messages after Yosys finishes.
-                var output = await outputTask;
-                var error = await errorTask;
-
-
-                // Returns Yosys messages if synthesis failed.
+                string output = await outputTask;
+                string error = await errorTask;
                 if (process.ExitCode != 0)
-                {
-                    return new HdlSynthesisResponse
-                    {
-                        Diagnostics = string.IsNullOrWhiteSpace(error)
-                      ? output
-                      : error + Environment.NewLine + output
-                    };
-                }
-                // Checks that Yosys created the JSON file.
-                var netlistPath = Path.Combine(workingFolder, "netlist.json");
+                    return Failure(string.IsNullOrWhiteSpace(error) ? output : error + Environment.NewLine + output);
+                string netlistPath = Path.Combine(workingFolder, "netlist.json");
                 if (!File.Exists(netlistPath))
-                {
-                    return new HdlSynthesisResponse
-                    {
-                        Diagnostics = "Yosys did not create the netlist file."
-                    };
-                }
-
-                var netlistJson = await File.ReadAllTextAsync(netlistPath, cancellationToken);
-
-
-                return new HdlSynthesisResponse
-                {
-                    NetlistJson = netlistJson,
-                    Diagnostics = string.Empty
-                };
+                    return Failure("Yosys did not create the netlist file.");
+                string netlistJson = await File.ReadAllTextAsync(netlistPath, linked.Token);
+                if (string.IsNullOrWhiteSpace(netlistJson))
+                    return Failure("Yosys returned an empty netlist.");
+                return new HdlSynthesisResponse { NetlistJson = netlistJson, Diagnostics = string.Empty };
             }
-
-
-
-
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (OperationCanceledException)
             {
-                // Keeps cancellation behaviour for ASP.NET Core.
-                throw;
+                return Failure($"HDL synthesis exceeded its {timeoutSeconds}-second time limit.");
             }
             catch (Exception ex)
             {
-                // Returns the error message to the API caller.
-                return new HdlSynthesisResponse
-                {
-                    Diagnostics = ex.Message
-                };
+                logger.LogError(ex, "HDL synthesis failed.");
+                return Failure(ex.Message);
             }
             finally
             {
-                // Removes temporary files after synthesis.
-                if (Directory.Exists(workingFolder))
+                try
                 {
-                    Directory.Delete(workingFolder, recursive: true);
+                    if (Directory.Exists(workingFolder))
+                        Directory.Delete(workingFolder, recursive: true);
                 }
-
-
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    logger.LogWarning(ex, "Could not remove the synthesis working folder.");
+                }
             }
-
         }
-    
-    
-    
-    
+
+        private static HdlSynthesisResponse Failure(string message)
+        {
+            return new HdlSynthesisResponse { Diagnostics = message };
+        }
     }
-
-
-   
-
 }

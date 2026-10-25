@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using LogicCore.Connections;
 using LogicCore.Interfaces;
@@ -23,7 +23,7 @@ namespace LogicCore.Validation
         public static ValidationResult CanAddGate(CircuitManager? manager, IGate? gate)
         {
             if (manager == null)
-                return ValidationResult.Fail("مدير الدارة غير موجود.");
+                return ValidationResult.Fail("The circuit manager is missing.");
 
             var result = ValidateGate(gate);
             if (!result.IsValid)
@@ -32,9 +32,9 @@ namespace LogicCore.Validation
             foreach (var existing in manager.Gates)
             {
                 if (existing != null &&
-                    string.Equals(existing.Id, gate!.Id, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(existing.Id, gate!.Id, StringComparison.Ordinal))
                 {
-                    return ValidationResult.Fail($"معرّف البوابة مكرر: {gate.Id}.");
+                    return ValidationResult.Fail($"Gate ID '{gate.Id}' is duplicated.");
                 }
             }
 
@@ -45,7 +45,7 @@ namespace LogicCore.Validation
             CircuitManager? manager, IGate? source, IGate? target, int targetInputIndex)
         {
             if (source == null || target == null)
-                return ValidationResult.Fail("أحد طرفي التوصيل غير صالح.");
+                return ValidationResult.Fail("A connection endpoint is invalid.");
 
             // نفحص الدارة مع السلك المقترح، بدون إضافته أو تغيير أي إشارة.
             return ValidateAndOrder(
@@ -61,13 +61,13 @@ namespace LogicCore.Validation
         private static ValidationResult ValidateGate(IGate? gate)
         {
             if (gate == null)
-                return ValidationResult.Fail("لا يمكن إضافة بوابة فارغة.");
+                return ValidationResult.Fail("A gate is required.");
 
             if (string.IsNullOrWhiteSpace(gate.Id))
-                return ValidationResult.Fail("معرّف البوابة لا يمكن أن يكون فارغًا.");
+                return ValidationResult.Fail("A gate ID is required.");
 
             if (gate.Inputs == null)
-                return ValidationResult.Fail($"مداخل البوابة {gate.Id} غير مهيأة.");
+                return ValidationResult.Fail($"Inputs on gate '{gate.Id}' are not initialized.");
 
             return ValidationResult.Success();
         }
@@ -78,9 +78,9 @@ namespace LogicCore.Validation
             order = new List<IGate>();
 
             if (manager == null)
-                return ValidationResult.Fail("مدير الدارة غير موجود.");
+                return ValidationResult.Fail("The circuit manager is missing.");
 
-            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
             var incomingCounts = new Dictionary<IGate, int>(ReferenceEqualityComparer.Instance);
             var outgoing = new Dictionary<IGate, List<IGate>>(ReferenceEqualityComparer.Instance);
             var occupiedInputs = new Dictionary<IGate, HashSet<int>>(ReferenceEqualityComparer.Instance);
@@ -92,7 +92,7 @@ namespace LogicCore.Validation
                     return result;
 
                 if (!ids.Add(gate.Id))
-                    return ValidationResult.Fail($"معرّف البوابة مكرر: {gate.Id}.");
+                    return ValidationResult.Fail($"Gate ID '{gate.Id}' is duplicated.");
 
                 incomingCounts.Add(gate, 0);
                 outgoing.Add(gate, new List<IGate>());
@@ -102,35 +102,35 @@ namespace LogicCore.Validation
             ValidationResult AddEdge(Wire? wire)
             {
                 if (wire == null || wire.SourceGate == null || wire.TargetGate == null)
-                    return ValidationResult.Fail("السلك أو أحد طرفيه غير صالح.");
+                    return ValidationResult.Fail("A wire or one of its endpoints is invalid.");
 
                 var source = wire.SourceGate;
                 var target = wire.TargetGate;
 
                 // تطابق المعرّف وحده لا يكفي: يجب استخدام كائن البوابة الموجود بالدارة.
                 if (!incomingCounts.ContainsKey(source) || !incomingCounts.ContainsKey(target))
-                    return ValidationResult.Fail("طرفا السلك يجب أن يكونا بوابتين موجودتين في الدارة نفسها.");
+                    return ValidationResult.Fail("Both wire endpoints must belong to this circuit.");
 
                 if (ReferenceEquals(source, target))
-                    return ValidationResult.Fail("لا يمكن توصيل البوابة بنفسها؛ هذا يكوّن حلقة.", true);
+                    return ValidationResult.Fail("A gate cannot connect to itself. Feedback is not supported.", true);
 
                 if (string.Equals(source.GateType, "LAMP", StringComparison.OrdinalIgnoreCase))
-                    return ValidationResult.Fail("المصباح لا يملك مخرجًا للإشارة.");
+                    return ValidationResult.Fail("A lamp cannot be used as a signal source.");
 
                 if (target.Inputs.Length == 0 ||
                     string.Equals(target.GateType, "SWITCH", StringComparison.OrdinalIgnoreCase))
                 {
-                    return ValidationResult.Fail("البوابة الهدف لا تملك مدخلًا لاستقبال الإشارة.");
+                    return ValidationResult.Fail("The target gate has no input pins.");
                 }
 
                 int index = wire.TargetInputIndex;
                 if (index < 0 || index >= target.Inputs.Length)
-                    return ValidationResult.Fail($"فهرس المدخل {index} خارج حدود البوابة الهدف.");
+                    return ValidationResult.Fail($"Input index {index} is outside the target gate's input range.");
 
                 if (!occupiedInputs[target].Add(index))
                 {
                     return ValidationResult.Fail(
-                        $"المدخل رقم ({index + 1}) متصل بسلك بالفعل. لا يمكن وصل سلك ثانٍ بالمدخل نفسه.");
+                        $"Input {index + 1} already has a wire. Only one wire per input is allowed.");
                 }
 
                 // لكل سلك اعتماد مستقل، بما فيه تفرع مصدر واحد إلى مدخلين في البوابة نفسها.
@@ -178,7 +178,7 @@ namespace LogicCore.Validation
             {
                 order.Clear();
                 return ValidationResult.Fail(
-                    "توجد حلقة في توصيلات الدارة. المحاكاة الحالية تدعم الدارات بدون حلقات فقط.", true);
+                    "The circuit contains a cycle. Only combinational circuits without feedback are supported.", true);
             }
 
             return ValidationResult.Success();

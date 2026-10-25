@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using LogicCore.Management;
 
 namespace LogicCore.Simulation
@@ -14,7 +14,7 @@ namespace LogicCore.Simulation
         private readonly CircuitManager _manager;
         public StepStage CurrentStage { get; private set; } = StepStage.TransferSignals;
         public int StepCount { get; private set; } = 0;
-        public string LastActionDescription { get; private set; } = "جاهز لبدء المحاكاة التدريجية.";
+        public string LastActionDescription { get; private set; } = "Ready for step simulation.";
 
         public StepSimulator(CircuitManager manager)
         {
@@ -25,7 +25,7 @@ namespace LogicCore.Simulation
         {
             CurrentStage = StepStage.TransferSignals;
             StepCount = 0;
-            LastActionDescription = "تمت إعادة ضبط الوضع التعليمي.";
+            LastActionDescription = "Step simulation reset.";
         }
 
         public void ExecuteNextStep()
@@ -38,7 +38,7 @@ namespace LogicCore.Simulation
                 {
                     wire.TransferSignal();
                 }
-                LastActionDescription = $"خطوة {StepCount}: تم نقل الإشارات المنطقية عبر جميع الأسلاك إلى مداخل البوابات.";
+                LastActionDescription = $"Step {StepCount}: transferred all wire signals to gate inputs.";
                 CurrentStage = StepStage.EvaluateGates;
             }
             else
@@ -47,7 +47,7 @@ namespace LogicCore.Simulation
                 {
                     gate.Evaluate();
                 }
-                LastActionDescription = $"خطوة {StepCount}: تم تقييم المنطق لجميع البوابات وتحديث قيم المخارج.";
+                LastActionDescription = $"Step {StepCount}: evaluated all gates and updated their outputs.";
                 CurrentStage = StepStage.TransferSignals;
             }
         }
