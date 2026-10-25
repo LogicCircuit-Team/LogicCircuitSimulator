@@ -1,119 +1,313 @@
 ﻿@using LogicCore.Management
 @using LogicCore.Gates
+@using LogicCore.Serialization
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
+@using BlazorApp1.Services
 
-<div class="sidebar-tools p-2">
-    <div class="d-flex flex-column gap-2">
-        <div class="text-muted fw-bold mb-1" style="font-size: 12px;">المداخل والمخارج</div>
-        <button class="btn btn-outline-primary btn-sm text-start" @onclick="AddSwitchAsync">
-            🔌 + SWITCH (مفتاح)
-        </button>
-        <button class="btn btn-outline-warning btn-sm text-start" @onclick="AddLampAsync">
-            💡 + LAMP (مصباح)
-        </button>
 
-        <div class="text-muted fw-bold mt-2 mb-1" style="font-size: 12px;">البوابات الأساسية</div>
-        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddAndAsync">
-            ➕ AND
-        </button>
-        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddOrAsync">
-            ➕ OR
-        </button>
-        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddNotAsync">
-            ➕ NOT
-        </button>
-
-        <div class="text-muted fw-bold mt-2 mb-1" style="font-size: 12px;">البوابات المركبة</div>
-        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddNandAsync">
-            ➕ NAND
-        </button>
-        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddNorAsync">
-            ➕ NOR
-        </button>
-        <button class="btn btn-outline-secondary btn-sm text-start" @onclick="AddXorAsync">
-            ➕ XOR
-        </button>
-
-        <hr class="my-2" />
-
-        <button class="btn btn-danger btn-sm w-100" @onclick="ClearBoardAsync">
-            🗑️ مسح اللوحة (Clear)
-        </button>
-    </div>
-</div>
 
 @code {
-    [Parameter] public CircuitManager Manager { get; set; } = default!;
-    [Parameter] public EventCallback OnCircuitChanged { get; set; }
+    private string SelectedFileName = "No file chosen";
+    private string CircuitName = "My Circuit";
+    private string? ApiMessage;
 
-    // حساب موضع متتالي لمنع تكدس البوابات فوق بعضها عند الإضافة
-    private (double X, double Y) GetNextPosition()
-    {
-        int count = Manager?.Gates.Count ?? 0;
-        double x = 60 + ((count % 4) * 160);
-        double y = 60 + ((count / 4) * 110);
-        return (x, y);
-    }
+    [Parameter]
+    public CircuitManager Manager { get; set; } = default!;
 
-    private async Task AddSwitchAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new Switch { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
+    [Parameter]
+    public EventCallback OnCircuitChanged { get; set; }
 
-    private async Task AddLampAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new Lamp { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
 
-    private async Task AddAndAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new AndGate { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
-
-    private async Task AddOrAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new ORGate { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
-
-    private async Task AddNotAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new NotGate { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
-
-    private async Task AddNandAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new NANDGate { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
-
-    private async Task AddNorAsync()
-    {
-        var pos = GetNextPosition();
-        // الاسم المسجل في النواة هو NOR وليس NORGate
-        Manager.AddGate(new NOR { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
-    }
-
-    private async Task AddXorAsync()
-    {
-        var pos = GetNextPosition();
-        Manager.AddGate(new XORGate { X = pos.X, Y = pos.Y });
-        await OnCircuitChanged.InvokeAsync();
     }
 
     private async Task ClearBoardAsync()
     {
+      
         Manager.Clear();
+
         await OnCircuitChanged.InvokeAsync();
     }
+    private async Task AddAndAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate( new AndGate { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+    private async Task AddOrAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate( new ORGate { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+    private async Task AddNotAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate(new NotGate { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+    private async Task AddNorAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate(new NOR { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+
+    private async Task AddNandAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate(new NANDGate { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+
+
+    private async Task AddLampAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate(new Lamp { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+
+
+
+    private async Task AddSwitchAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate(new Switch{ X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+
+
+    private async Task AddXorAsync()
+    {
+        var position = GetNextPosition();
+        Manager.AddGate(new XORGate { X = position.X, Y = position.Y });
+        await OnCircuitChanged.InvokeAsync();
+    }
+
+
+
+
+
+
+    private async Task SaveCircuitAsync()
+    {
+        var json = CircuitSerializer.ToJson(Manager);
+        await JS.InvokeVoidAsync("downloadTextFile", "circuit.json", json);
+    }
+
+    // Stores a loading error.
+    private string? LoadError;
+
+    private async Task LoadCircuitAsync(InputFileChangeEventArgs e)
+    {
+        LoadError = null;
+        SelectedFileName = e.File.Name;
+        try
+        {
+            // Opens the selected file.
+            await using var stream = e.File.OpenReadStream(1_000_000);
+            using var reader = new StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+
+            /// Converts JSON into a circuit.
+            var loadedManager = CircuitSerializer.FromJsonToManager(json);
+
+
+            // Removes the current gates & wires in Manager.
+            Manager.Gates.Clear();
+            Manager.Wires.Clear();
+
+            //  loadedManager ===>> Manager
+
+            foreach (var gate in loadedManager.Gates)
+            {
+
+                Manager.AddGate(gate);
+
+            }
+
+            foreach (var wire in loadedManager.Wires)
+            {
+                Manager.AddWire(wire);
+            
+            }
+
+            await OnCircuitChanged.InvokeAsync();
+
+        }
+
+
+
+          catch(Exception ex)
+         {
+            LoadError = ex.Message;
+            
+         }
+
+
+
+    }
+
+
+    // Saves the current circuit to the API.
+    private async Task SaveToApiAsync()
+    {
+        ApiMessage = null;
+
+        if (string.IsNullOrWhiteSpace(CircuitName))
+        {
+            ApiMessage = "Enter a circuit name.";
+            return;
+        }
+
+        try
+        {
+            var json = CircuitSerializer.ToJson(Manager);
+            var savedCircuit = await CircuitApi.CreateAsync(CircuitName, json);
+            ApiMessage = $"Saved successfully. Circuit ID: {savedCircuit.CircuitId}";
+        }
+        catch (Exception ex)
+        {
+            ApiMessage = $"Save failed: {ex.Message}";
+        }
+  
+    
+    }
+
+    private int ApiLoadId;
+    private List<SavedCircuitDto> SavedCircuits = new();
+    private string? ApiListMessage;
+    private string? ApiLoadMessage;
+
+    private async Task LoadFromApiAsync()
+    {
+        ApiLoadMessage = null;
+
+        if (ApiLoadId <= 0)
+        {
+            ApiLoadMessage = "Enter a valid circuit ID.";
+            return;
+        }
+
+        try
+        {
+            // Gets the saved circuit from the API.
+            var savedCircuit = await CircuitApi.GetByIdAsync(ApiLoadId);
+
+            // Checks that the circuit was found.
+            if (savedCircuit is null)
+            {
+                ApiLoadMessage = "Circuit was not found.";
+                return;
+            }
+            CircuitName = savedCircuit.Name;
+            // Converts its JSON before changing the current circuit.
+            var loadedManager =
+                CircuitSerializer.FromJsonToManager(savedCircuit.JsonData);
+
+            // Replaces the current circuit with the loaded one.
+            Manager.Gates.Clear();
+            Manager.Wires.Clear();
+
+            foreach (var gate in loadedManager.Gates)
+                Manager.AddGate(gate);
+
+            foreach (var wire in loadedManager.Wires)
+                Manager.AddWire(wire);
+
+            await OnCircuitChanged.InvokeAsync();
+            ApiLoadMessage = $"Loaded successfully: {savedCircuit.Name}";
+        }
+        catch (Exception ex)
+        {
+            ApiLoadMessage = ex.Message;
+        }
+    }
+
+    private async Task LoadSavedCircuitsAsync()
+    {
+        ApiListMessage = null;
+
+        try
+        {
+            // Gets all saved circuits from the API.
+            var circuits = await CircuitApi.GetAllAsync();
+            SavedCircuits = circuits?.ToList() ?? new();
+
+            if (SavedCircuits.Count == 0)
+            {
+                ApiLoadId = 0;
+                ApiListMessage = "No saved circuits found.";
+                return;
+            }
+
+            // Selects the most recently updated circuit.
+            ApiLoadId = SavedCircuits[0].CircuitId;
+            ApiListMessage = $"Found {SavedCircuits.Count} saved circuit(s).";
+        }
+        catch (Exception ex)
+        {
+            ApiListMessage = ex.Message;
+        }
+   
+    
+    
+    
+    }
+
+
+
+
+    private async Task UpdateSavedCircuitAsync()
+    {
+        ApiMessage = null;
+
+        if (ApiLoadId <= 0)
+        {
+            ApiMessage = "Select a saved circuit first.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(CircuitName))
+        {
+            ApiMessage = "Enter a circuit name.";
+            return;
+        }
+
+        try
+        {
+            // Updates the selected circuit with the current circuit data.
+            var json = CircuitSerializer.ToJson(Manager);
+            await CircuitApi.UpdateAsync(ApiLoadId, CircuitName, json);
+
+            ApiMessage = $"Circuit {ApiLoadId} updated successfully.";
+            await LoadSavedCircuitsAsync();
+        }
+        catch (Exception ex)
+        {
+            ApiMessage = $"Update failed: {ex.Message}";
+        }
+    }
 }
+
+
+
+
+
+
