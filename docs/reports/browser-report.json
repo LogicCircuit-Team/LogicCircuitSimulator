@@ -1,0 +1,42 @@
+{
+  "checks": [
+    "Hosted Blazor app starts",
+    "Sidebar .sv request uses hosted API",
+    "Sidebar .sv creates full adder",
+    "Top module inferred from .sv file",
+    "Full adder has 8 rows and 5 columns",
+    "Full adder row 000",
+    "Full adder row 001",
+    "Full adder row 010",
+    "Full adder row 011",
+    "Full adder row 100",
+    "Full adder row 101",
+    "Full adder row 110",
+    "Full adder row 111",
+    "Generated SystemVerilog compiles through real Yosys",
+    "Generated .sv download works",
+    "Downloaded HDL matches generated text",
+    "Dedicated .v upload succeeds",
+    "Dedicated .v creates AND circuit",
+    "Dedicated .sv upload succeeds",
+    "Invalid HDL returns synthesis diagnostics",
+    "Invalid HDL preserves current circuit",
+    "Local JSON import still works",
+    "Full adder has 8 rows and 5 columns",
+    "Full adder row 000",
+    "Full adder row 001",
+    "Full adder row 010",
+    "Full adder row 011",
+    "Full adder row 100",
+    "Full adder row 101",
+    "Full adder row 110",
+    "Full adder row 111",
+    "No browser runtime errors",
+    "No failed resources or network requests"
+  ],
+  "errors": [],
+  "failures": [],
+  "expectedHttpErrors": [
+    "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+  ]
+}

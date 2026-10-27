@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <EnableDefaultCompressionFormats>false</EnableDefaultCompressionFormats>
+    <BuildCompressionFormats>gzip</BuildCompressionFormats>
+    <PublishCompressionFormats>gzip</PublishCompressionFormats>
+  </PropertyGroup>
+</Project>

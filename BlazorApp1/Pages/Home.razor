@@ -1,0 +1,159 @@
+@page "/"
+@layout WorkspaceLayout
+@using LogicCore.Management
+@using BlazorApp1.Services
+@using Microsoft.AspNetCore.Components.Web
+
+<PageTitle>Logic Circuit Simulator</PageTitle>
+
+<div class="page logic-home" dir="ltr">
+    <header class="navbar navbar-expand-md navbar-light">
+        <div class="container-fluid gap-3">
+            <span class="navbar-brand m-0">Logic Circuit Simulator</span>
+            <nav class="workspace-tabs" aria-label="Workspace navigation">
+                <button type="button" class="workspace-tab @(!showCommunity ? "active" : "")" @onclick="ShowWorkspace">Workspace</button>
+                <button type="button" class="workspace-tab @(showCommunity ? "active" : "")" @onclick="ShowCommunity">Community</button>
+            </nav>
+
+            <div class="ms-auto d-flex flex-wrap gap-2">
+                <span class="badge bg-blue-lt">Gates: @sharedManager.Gates.Count</span>
+                <span class="badge bg-green-lt">Wires: @sharedManager.Wires.Count</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-wrapper">
+        <div class="page-header">
+            <div class="container-fluid">
+                <div class="page-pretitle">Digital Logic Simulator</div>
+                <h1 class="page-title">@(showCommunity ? "Community" : "Circuit Workspace")</h1>
+                <p class="page-description">@(showCommunity ? "Share a design or explore circuits from other builders." : "Build a circuit, follow its signals, and work with Verilog.")</p>
+            </div>
+        </div>
+
+        <div class="page-body">
+            <div class="container-fluid">
+                <div hidden="@showCommunity">
+                <nav class="mobile-panel-tabs" aria-label="Workspace panels">
+                    <button type="button" class="@(mobilePanel == "tools" ? "active" : "")" @onclick='() => SelectMobilePanel("tools")'>Components</button>
+                    <button type="button" class="@(mobilePanel == "board" ? "active" : "")" @onclick='() => SelectMobilePanel("board")'>Circuit board</button>
+                    <button type="button" class="@(mobilePanel == "analysis" ? "active" : "")" @onclick='() => SelectMobilePanel("analysis")'>Analysis</button>
+                </nav>
+                <div class="workspace-grid mobile-panel-@mobilePanel">
+
+                    <aside class="card workspace-panel tools-panel" aria-labelledby="tools-title">
+                        <div class="card-header">
+                            <h2 class="card-title" id="tools-title">Gates &amp; Tools</h2>
+                        </div>
+                        <div class="card-body">
+                            <SidebarAndApi Manager="@sharedManager"
+                                           OnCircuitChanged="RefreshAll"
+                                           OnHdlFileSelected="ImportHdlFileAsync" />
+                        </div>
+                    </aside>
+
+                    <main class="card workspace-panel canvas-panel" aria-labelledby="canvas-title">
+                        <div class="card-header">
+                            <h2 class="card-title" id="canvas-title">Circuit Board</h2>
+                            <div class="card-actions">
+                                <span class="badge bg-azure-lt">Canvas</span>
+                            </div>
+                        </div>
+                        <div class="card-body canvas-host">
+                            <CanvasBoard @ref="canvasBoard"
+                                         Manager="@sharedManager"
+                                         OnBoardUpdated="RefreshAnalysis" />
+                        </div>
+                    </main>
+
+                    <aside class="card workspace-panel analysis-panel" aria-labelledby="analysis-title">
+                        <div class="card-header">
+                            <h2 class="card-title" id="analysis-title">Analysis &amp; Verilog</h2>
+                        </div>
+                        <div class="card-body">
+                            <AnalysisPanel @ref="analysisPanel"
+                                           Manager="@sharedManager"
+                                           OnCircuitChanged="RefreshAll" />
+                        </div>
+                    </aside>
+
+                </div>
+                </div>
+                <div hidden="@(!showCommunity)">
+                    @if (communityOpened)
+                    {
+                        <CommunityPanel Manager="sharedManager" SelectedCircuitId="SharedCircuitId" OnCircuitImported="ImportSharedCircuit" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private readonly CircuitManager sharedManager = new();
+    private CanvasBoard? canvasBoard;
+    private AnalysisPanel? analysisPanel;
+    [SupplyParameterFromQuery(Name = "shared")]
+    public int? SharedCircuitId { get; set; }
+    private bool showCommunity;
+    private bool redrawWorkspace;
+    private bool communityOpened;
+    private string mobilePanel = "board";
+    private int? previousSharedId;
+
+    protected override void OnParametersSet()
+    {
+        if (SharedCircuitId is > 0 && previousSharedId != SharedCircuitId)
+        {
+            previousSharedId = SharedCircuitId;
+            showCommunity = true;
+            communityOpened = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (redrawWorkspace && canvasBoard != null)
+        {
+            redrawWorkspace = false;
+            await canvasBoard.RedrawAsync();
+        }
+    }
+
+    private void ShowWorkspace() { showCommunity = false; redrawWorkspace = true; }
+    private void ShowCommunity() { showCommunity = true; communityOpened = true; }
+    private void SelectMobilePanel(string panel) { mobilePanel = panel; redrawWorkspace = panel == "board"; }
+
+    private Task ImportSharedCircuit(CircuitManager imported)
+    {
+        sharedManager.ReplaceWith(imported);
+        showCommunity = false;
+        mobilePanel = "board";
+        redrawWorkspace = true;
+        RefreshAnalysis();
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshAll()
+    {
+        if (canvasBoard is not null)
+        {
+            await canvasBoard.RedrawAsync();
+        }
+
+        RefreshAnalysis();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void RefreshAnalysis()
+    {
+        analysisPanel?.GenerateAnalysis();
+    }
+
+    private Task ImportHdlFileAsync(HdlSourceFile file)
+    {
+        return analysisPanel?.ImportHdlFileAsync(file) ?? Task.CompletedTask;
+    }
+}

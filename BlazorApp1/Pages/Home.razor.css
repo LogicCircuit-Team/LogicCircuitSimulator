@@ -1,0 +1,45 @@
+.logic-home { min-height: 100dvh; background: #f5f7fa; color: #253044; }
+.logic-home .navbar { min-height: 64px; border-bottom: 1px solid #e1e6ed; box-shadow: none; }
+.logic-home .navbar-brand { font-size: 1.05rem; font-weight: 650; letter-spacing: -.025em; }
+.logic-home .page-wrapper { margin: 0; min-height: 0; }
+.logic-home .page-header { margin: 20px 0 16px; }
+.logic-home .page-title { font-size: 1.45rem; font-weight: 650; letter-spacing: -.025em; }
+.logic-home .page-pretitle { font-size: .65rem; letter-spacing: .12em; color: #768295; margin-bottom: 4px; }
+.page-description { margin: 5px 0 0; color: #68758a; font-size: .85rem; }
+.logic-home .page-body { margin: 0 0 20px; }
+.workspace-tabs { display: flex; align-items: center; gap: 4px; }
+.workspace-tab { border: 0; background: transparent; padding: 8px 13px; border-radius: 7px; color: #657187; font: inherit; font-size: .85rem; cursor: pointer; }
+.workspace-tab:hover { background: #f0f3f8; color: #253044; }
+.workspace-tab.active { background: #eaf0ff; color: #315bc3; font-weight: 600; }
+.workspace-tab:focus-visible { outline: 2px solid #315bc3; outline-offset: 2px; }
+.workspace-grid { display: grid; grid-template-columns: 15rem minmax(0, 1fr) 23rem; gap: 16px; height: calc(100dvh - 188px); min-height: 34rem; }
+.workspace-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; margin: 0; border: 1px solid #dfe5ed; border-radius: 12px; box-shadow: 0 2px 6px #192b4505; overflow: hidden; }
+.workspace-panel > .card-header { flex: 0 0 auto; min-height: 54px; padding: 14px 16px; border-bottom: 1px solid #e6eaf0; }
+.workspace-panel > .card-header .card-title { font-size: .9rem; font-weight: 600; }
+.workspace-panel > .card-body { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 14px; scrollbar-width: thin; scrollbar-color: #c9d1de transparent; }
+.canvas-host { display: flex; padding: 0 !important; }
+.canvas-panel > .card-header { background: #fff; }
+.mobile-panel-tabs { display: none; }
+@media (max-width: 1399.98px) { .workspace-grid { grid-template-columns: 13.5rem minmax(0, 1fr) 20rem; gap: 12px; } }
+@media (max-width: 1099.98px) {
+    .workspace-grid { grid-template-columns: 14rem minmax(0, 1fr); height: auto; }
+    .canvas-panel { height: 36rem; }
+    .analysis-panel { grid-column: 1 / -1; }
+}
+@media (max-width: 767.98px) {
+    .mobile-panel-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .mobile-panel-tabs button { flex: 1; background: #fff; border: 1px solid #d8e0eb; border-radius: 7px; padding: 9px 5px; color: #657187; font-size: .75rem; }
+    .mobile-panel-tabs button.active { color: #315bc3; background: #eaf0ff; border-color: #b8c8ee; font-weight: 600; }
+    .mobile-panel-board .tools-panel, .mobile-panel-board .analysis-panel,
+    .mobile-panel-tools .canvas-panel, .mobile-panel-tools .analysis-panel,
+    .mobile-panel-analysis .tools-panel, .mobile-panel-analysis .canvas-panel { display: none; }
+    .workspace-grid { grid-template-columns: minmax(0, 1fr); }
+    .workspace-panel { max-height: none; }
+    .analysis-panel { max-height: none; }
+    .canvas-panel { min-height: 28rem; }
+    .canvas-panel { height: calc(100dvh - 265px); }
+    .logic-home .navbar-brand { font-size: .95rem; white-space: normal; }
+    .logic-home .navbar .container-fluid { flex-wrap: wrap; gap: 10px !important; padding: 12px 16px; }
+    .workspace-tabs { order: 3; width: 100%; }
+    .page-description { max-width: 28rem; }
+}

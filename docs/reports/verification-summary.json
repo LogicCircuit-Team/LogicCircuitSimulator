@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-26",
+  "provider": "SQLite file",
+  "configuration": "Release publish",
+  "checks": {
+    "core": 60,
+    "api": 26,
+    "restart": 3,
+    "browser": 33,
+    "mobile": 21,
+    "benchmark_ms": 17.96
+  },
+  "originalCoreFilesTokenIdentical": 21,
+  "cloudDeployed": false,
+  "physicalPhoneTested": false
+}

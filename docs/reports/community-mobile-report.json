@@ -1,0 +1,26 @@
+{
+  "checks": [
+    "Pasting HDL suggests the correct top module",
+    "Publish from the real UI",
+    "Publisher sees Unpublish",
+    "Share links open the selected public circuit",
+    "A visitor does not see Unpublish",
+    "Open copy loads the board",
+    "Imported community copy has eight truth table rows",
+    "Publisher can unpublish from the UI",
+    "Unpublishing leaves the visitor copy intact",
+    "Mobile page has no horizontal overflow",
+    "Mobile workspace tabs are visible",
+    "Touch gestures connect output and input pins",
+    "Touch toggles a switch once",
+    "Touch drag moves a gate",
+    "Mobile touch-built circuit simulates both input states",
+    "HDL file import works in the mobile layout",
+    "Pasting a different module after file import updates its suggestion",
+    "A manual top-module choice survives the next paste",
+    "Mobile canvas fits the screen",
+    "Landscape layout has no horizontal overflow",
+    "No JavaScript runtime errors"
+  ],
+  "errors": []
+}

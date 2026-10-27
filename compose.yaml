@@ -1,0 +1,32 @@
+services:
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_PID: Express
+      MSSQL_SA_PASSWORD: ${SQL_PASSWORD:?Set SQL_PASSWORD in .env}
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/1433'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  simulator:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__CircuitDatabase: Server=database;Database=CircuitDb;User Id=sa;Password=${SQL_PASSWORD};Encrypt=True;TrustServerCertificate=True;
+      Database__Provider: SqlServer
+      Database__ApplyMigrationsOnStartup: "true"
+    volumes:
+      - app-keys:/home/data-protection-keys
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  sql-data:
+  app-keys:

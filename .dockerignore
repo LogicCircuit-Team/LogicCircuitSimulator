@@ -1,0 +1,14 @@
+**/bin
+**/obj
+.git
+.vs
+tools
+App_Data
+**/*.zip
+**/*.rar
+**/*.tgz
+**/*.pfx
+.env
+**/*.user
+docs
+tests

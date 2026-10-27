@@ -1,0 +1,6 @@
+@CircuitApi_HostAddress = http://localhost:5210
+
+GET {{CircuitApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

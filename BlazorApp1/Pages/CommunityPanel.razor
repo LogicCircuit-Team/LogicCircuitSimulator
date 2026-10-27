@@ -1,0 +1,207 @@
+@using BlazorApp1.Services
+@using LogicCore.Management
+@using LogicCore.Serialization
+@inject CircuitApiClient CircuitApi
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<div class="community-layout">
+    <section class="card publish-panel" aria-labelledby="publish-title">
+        <div class="card-header section-heading">
+            <h2 id="publish-title" class="card-title">Share your circuit</h2>
+            <p>Publish a copy of the circuit on your board.</p>
+        </div>
+        <div class="card-body">
+            <label for="community-name" class="form-label">Circuit name</label>
+            <input id="community-name" class="form-control mb-3" @bind="circuitName" maxlength="100" disabled="@isBusy" />
+            <label for="community-author" class="form-label">Display name</label>
+            <input id="community-author" class="form-control mb-3" @bind="authorName" maxlength="60" disabled="@isBusy" />
+            <label for="community-description" class="form-label">Description</label>
+            <textarea id="community-description" class="form-control mb-3" rows="4" @bind="description" maxlength="500" disabled="@isBusy"></textarea>
+            <button type="button" class="btn btn-primary w-100" @onclick="PublishCircuit" disabled="@isBusy">Publish circuit</button>
+            <p class="form-text mt-3 mb-0">Published circuits are public. Your saved circuits stay private to this browser. Keep site data to retain access to them.</p>
+        </div>
+    </section>
+
+    <section class="community-browser" aria-labelledby="community-title">
+        <div class="community-heading">
+            <div>
+                <h2 id="community-title">Community circuits</h2>
+                <p>Explore a design and open your own working copy.</p>
+            </div>
+            <button type="button" class="btn btn-outline-secondary" @onclick="RefreshCircuits" disabled="@isBusy">Refresh</button>
+        </div>
+        <form class="community-search" @onsubmit="SearchCircuits" @onsubmit:preventDefault>
+            <label class="visually-hidden" for="community-search">Search circuits or authors</label>
+            <input id="community-search" class="form-control" @bind="search" maxlength="100" placeholder="Search circuits or authors" disabled="@isBusy" />
+            <button type="submit" class="btn btn-outline-primary" disabled="@isBusy">Search</button>
+        </form>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@errorMessage</div>
+        }
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert alert-success" role="status">@message</div>
+        }
+        @if (isBusy)
+        {
+            <p class="text-muted" role="status">Loading...</p>
+        }
+        @if (!isBusy && circuits.Count == 0 && string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="empty-state"><h3>No circuits found</h3><p>Try another search, or publish a circuit from your board.</p></div>
+        }
+        <div class="community-cards">
+            @foreach (var circuit in circuits)
+            {
+                <article class="card community-card" @key="circuit.SharedCircuitId">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between gap-2 align-items-start">
+                            <h3>@circuit.Name</h3>
+                            @if (circuit.IsMine)
+                            {
+                                <span class="badge bg-blue-lt">Yours</span>
+                            }
+                        </div>
+                        <p class="community-author">By @circuit.AuthorName · @circuit.PublishedAt.ToLocalTime().ToString("dd MMM yyyy")</p>
+                        <p class="community-description">@circuit.Description</p>
+                        <div class="community-actions">
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => OpenCopy(circuit.SharedCircuitId)" disabled="@isBusy">Open copy</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => CopyLink(circuit.SharedCircuitId)" disabled="@isBusy">Copy link</button>
+                            @if (circuit.IsMine)
+                            {
+                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UnpublishCircuit(circuit.SharedCircuitId)" disabled="@isBusy">Unpublish</button>
+                            }
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+        <nav class="community-pagination" aria-label="Community pages">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PreviousPage" disabled="@(isBusy || pageNumber == 1)">Previous</button>
+            <span>Page @pageNumber</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="NextPage" disabled="@(isBusy || circuits.Count < 12)">Next</button>
+        </nav>
+    </section>
+</div>
+
+@code {
+    [Parameter] public CircuitManager Manager { get; set; } = default!;
+    [Parameter] public EventCallback<CircuitManager> OnCircuitImported { get; set; }
+    [Parameter] public int? SelectedCircuitId { get; set; }
+
+    private List<SharedCircuitDto> circuits = new List<SharedCircuitDto>();
+    private string circuitName = string.Empty;
+    private string authorName = string.Empty;
+    private string description = string.Empty;
+    private string search = string.Empty;
+    private string errorMessage = string.Empty;
+    private string message = string.Empty;
+    private bool isBusy;
+    private bool loaded;
+    private int pageNumber = 1;
+    private int? previousSelectedId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedCircuitId is > 0 && previousSelectedId != SelectedCircuitId)
+        {
+            previousSelectedId = SelectedCircuitId;
+            loaded = true;
+            isBusy = true;
+            try
+            {
+                circuits = new List<SharedCircuitDto> { await CircuitApi.GetSharedByIdAsync(SelectedCircuitId.Value) };
+            }
+            catch (Exception)
+            {
+                errorMessage = "This shared circuit is unavailable. It may have been unpublished.";
+            }
+            finally { isBusy = false; }
+        }
+        else if (!loaded)
+        {
+            loaded = true;
+            await RefreshCircuits();
+        }
+    }
+
+    private async Task RefreshCircuits()
+    {
+        if (isBusy) return;
+        isBusy = true;
+        errorMessage = string.Empty;
+        try { circuits = await CircuitApi.GetSharedAsync(search, pageNumber); }
+        catch (Exception) { errorMessage = "Community circuits could not be loaded. Check that the API and database are running."; }
+        finally { isBusy = false; }
+    }
+
+    private async Task PublishCircuit()
+    {
+        if (isBusy) return;
+        errorMessage = string.Empty;
+        message = string.Empty;
+        if (string.IsNullOrWhiteSpace(circuitName) || string.IsNullOrWhiteSpace(authorName))
+        {
+            errorMessage = "Enter a circuit name and a display name.";
+            return;
+        }
+        isBusy = true;
+        try
+        {
+            await CircuitApi.PublishAsync(circuitName, authorName, description, CircuitSerializer.ToJson(Manager));
+            search = string.Empty;
+            pageNumber = 1;
+            circuits = await CircuitApi.GetSharedAsync(search, pageNumber);
+            message = "Your circuit is published. Later changes on the board will not change this copy.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { isBusy = false; }
+    }
+
+    private async Task OpenCopy(int id)
+    {
+        if (isBusy) return;
+        isBusy = true;
+        errorMessage = string.Empty;
+        try
+        {
+            var circuit = await CircuitApi.GetSharedByIdAsync(id);
+            var imported = CircuitSerializer.FromJsonToManager(circuit.JsonData);
+            await OnCircuitImported.InvokeAsync(imported);
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { isBusy = false; }
+    }
+
+    private async Task CopyLink(int id)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("copyText", Navigation.BaseUri + "?shared=" + id);
+            message = "Circuit link copied.";
+        }
+        catch (Exception) { errorMessage = "The link could not be copied. Allow clipboard access and try again."; }
+    }
+
+    private async Task UnpublishCircuit(int id)
+    {
+        if (isBusy || !await JS.InvokeAsync<bool>("confirm", "Remove this circuit from the community? Your saved circuit will be kept.")) return;
+        isBusy = true;
+        errorMessage = string.Empty;
+        try
+        {
+            await CircuitApi.UnpublishAsync(id);
+            circuits.RemoveAll(circuit => circuit.SharedCircuitId == id);
+            message = "The circuit is no longer public.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { isBusy = false; }
+    }
+
+    private async Task SearchCircuits() { pageNumber = 1; await RefreshCircuits(); }
+    private async Task PreviousPage() { if (pageNumber > 1) pageNumber--; await RefreshCircuits(); }
+    private async Task NextPage() { pageNumber++; await RefreshCircuits(); }
+}
