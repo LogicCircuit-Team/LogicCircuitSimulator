@@ -1,5 +1,0 @@
-<Solution>
-  <Project Path="BlazorApp1/BlazorApp1.csproj" Id="ce2f5e33-19ff-4b66-b024-cc58b8066f00" />
-  <Project Path="CircuitApi/CircuitApi.csproj" Id="b7210c76-7e8b-49c3-9e7f-4b0972ccec74" />
-  <Project Path="LogicCore/LogicCore.csproj" />
-</Solution>
