@@ -39,3 +39,38 @@ The starting point was the supplied `LogicCircuitSimulator-Verified.rar`. Its or
 - Added semantic core/API checks, examples, deployment instructions, an accurate test report and the Word guide.
 
 The code remains a combinational simulator. No flip-flop support, registered accounts, full guided teaching mode or unmeasured performance claim was added.
+
+
+## Presentation update 26 October 2026
+
+- Replaced the previous theme with the bundled Sneat 3.0.0 Bootstrap template.
+- Applied ready-made buttons, cards, navigation, badges, forms and accordion styling to the workspace and community.
+- Kept all C# files, JavaScript and Razor @code blocks byte-identical to the previous delivered package.
+- Reduced the upstream core stylesheet from 800032 to 211506 bytes and kept only the used icons. No dashboard JavaScript dependencies were added.
+- Restyled the complete Arabic guide using an open technical report template, with a linked contents page, readable method tables, repeated table headers and a chapter explaining the presentation and asset changes.
+- Full explanations are in the Word guide. Local review precedes any GitHub upload or Azure deployment.
+
+
+## Logic Space template update 26 October 2026
+
+- Adapted the supplied Logic-Space-Classic-Bulb template: a compact white header, green command bar, component library, central board and analysis inspector.
+- Kept all 49 C# source files, all seven Razor @code blocks and circuit-ui.js byte-identical to the previous package. API configuration, database migrations, simulation, HDL adapters and startup scripts are unchanged.
+- Replaced the previous theme with Bootstrap 5.3.3 and the supplied template stylesheet. Bootstrap Offcanvas provides mobile Components and Analysis panels.
+- Kept the existing canvas drawing code and component symbols. The template's separate JavaScript simulator, Konva and incompatible standalone JSON format are not imported.
+- Moved the existing zoom controls to the bottom of the board. All controls still call the same C# handlers.
+- Reduced the supplied Bootstrap Icons font from 176032 bytes to 2812 bytes by retaining the twenty used glyphs. This is an asset-size reduction, not a claim about simulation speed.
+- Preserved library license texts in separate notice files. No source comments were added. The Arabic Word guide explains the exact changed files and the verification limits.
+
+
+## Canvas navigation and student deployment
+
+Added a toolbar Truth Table shortcut using the existing generation handler, horizontal and vertical view sliders, collapsible desktop panels and panel-width drag handles. Added orthogonal presentation routes, crossover clearance and matching pointer/touch selection. Original C# files and original Razor code blocks remain unchanged; the additions live in presentation files. Routing is cached by geometry and limited to nearby obstacles and segments.
+
+Added Deploy-Azure-Student.ps1 for local Docker builds and ACR pushes. It builds before requesting new resources and supports CheckOnly without provisioning. The previous ACR Tasks script is retained. Updated the English Azure guide, added the detailed Arabic Azure guide, expanded the Arabic Word manual, and recorded the current checks and untested deployment boundaries.
+
+
+## Centered analysis windows
+
+Truth Table now opens as a wide centered dialog from the toolbar. Import HDL and Export HDL use matching dialogs launched from three compact side-panel cards. Added expand/restore, close/back actions, native keyboard focus and Escape behavior, backdrop dismissal, horizontal table scrolling and automatic mobile drawer dismissal. Opening a library HDL file reveals its import window.
+
+Refined Bootstrap button styling, palette hover states, dialog spacing, table headers and mobile dimensions. Added analysis-dialogs.css and updated the existing presentation script and markup. All 52 existing C# files, eight original Razor code blocks and circuit-ui.js remain byte-identical to the previous archive. The Arabic Word guide explains the changes in chapter 19.

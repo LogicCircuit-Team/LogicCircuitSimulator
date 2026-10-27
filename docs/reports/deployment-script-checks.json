@@ -1,0 +1,54 @@
+[
+  {
+    "passed": true,
+    "name": "All shipped PowerShell scripts parse"
+  },
+  {
+    "passed": true,
+    "name": "CheckOnly creates no cloud resources"
+  },
+  {
+    "passed": true,
+    "name": "Secure SQL parameter is supplied through a temporary file"
+  },
+  {
+    "passed": true,
+    "name": "Local build runs before resource creation"
+  },
+  {
+    "passed": true,
+    "name": "Image uses local push instead of ACR Tasks"
+  },
+  {
+    "passed": true,
+    "name": "SQL temporary file is removed after success"
+  },
+  {
+    "passed": true,
+    "name": "Script waits for database health"
+  },
+  {
+    "passed": true,
+    "name": "Build failure stops deployment"
+  },
+  {
+    "passed": true,
+    "name": "Failed build requests no new Azure resources"
+  },
+  {
+    "passed": true,
+    "name": "Secure SQL parameter is supplied through a temporary file"
+  },
+  {
+    "passed": true,
+    "name": "Failed resource deployment stops image upload"
+  },
+  {
+    "passed": true,
+    "name": "SQL temporary file is removed after deployment failure"
+  },
+  {
+    "passed": true,
+    "name": "Invalid resource prefix is rejected"
+  }
+]

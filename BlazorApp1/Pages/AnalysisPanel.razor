@@ -6,29 +6,38 @@
 
 @inject HdlImportClient ImportClient
 
-<div class="d-flex flex-column gap-3 analysis-stack">
+<section class="analysis-tools" aria-label="Analysis tools">
+    <p class="analysis-intro">Choose a tool to open it in a larger workspace.</p>
+    <button type="button" class="analysis-tool analysis-tool-primary" data-truth-table aria-haspopup="dialog" aria-controls="truth-table-dialog">
+        <span class="analysis-tool-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
+        <span class="analysis-tool-copy"><strong>Truth Table</strong><small>Explore every input combination</small></span>
+        <i class="bi bi-arrows-fullscreen analysis-tool-arrow" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="analysis-tool" data-analysis-dialog="export-hdl-dialog" aria-haspopup="dialog" aria-controls="export-hdl-dialog">
+        <span class="analysis-tool-icon"><i class="bi bi-code-slash" aria-hidden="true"></i></span>
+        <span class="analysis-tool-copy"><strong>Export HDL</strong><small>Generate and download Verilog</small></span>
+        <i class="bi bi-arrows-fullscreen analysis-tool-arrow" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="analysis-tool" data-analysis-dialog="import-hdl-dialog" aria-haspopup="dialog" aria-controls="import-hdl-dialog">
+        <span class="analysis-tool-icon"><i class="bi bi-upload" aria-hidden="true"></i></span>
+        <span class="analysis-tool-copy"><strong>Import HDL</strong><small>Build a circuit from .sv or .v</small></span>
+        <i class="bi bi-arrows-fullscreen analysis-tool-arrow" aria-hidden="true"></i>
+    </button>
+</section>
 
-    <section class="card shadow-sm" aria-label="Truth table">
-        <div class="card-header bg-light py-3">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div>
-                    <h2 class="h6 fw-bold mb-1">Truth Table</h2>
-                    <p class="small text-muted mb-0">View the circuit's input and output combinations.</p>
-                </div>
-
-                @if (resultsDirty)
-                {
-                    <span class="badge bg-secondary">Not generated</span>
-                }
-                else
-                {
-                    <span class="badge bg-success">Generated</span>
-                }
+<dialog id="truth-table-dialog" class="analysis-dialog truth-dialog" aria-labelledby="truth-table-dialog-title" aria-describedby="truth-table-dialog-description">
+    <div class="modal-content">
+        <header class="modal-header">
+            <span class="dialog-title-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
+            <div class="dialog-heading">
+                <h2 id="truth-table-dialog-title" class="modal-title">Truth Table</h2>
+                <p id="truth-table-dialog-description">Every input combination, with its resulting outputs.</p>
             </div>
-        </div>
-
-        <div class="card-body">
-            <button class="btn btn-primary w-100 mb-3"
+            <button type="button" class="btn dialog-expand" data-dialog-expand aria-label="Expand window" aria-pressed="false" title="Expand window"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i></button>
+            <button type="button" class="btn-close" data-dialog-close aria-label="Close Truth Table" title="Close Truth Table"></button>
+        </header>
+        <div class="modal-body accordion-body">
+            <button class="btn btn-primary mb-3" data-truth-generate
                     @onclick="GenerateTruthTable"
                     type="button">
                 Generate Truth Table
@@ -53,22 +62,21 @@
             {
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                     <span class="small fw-bold">Results</span>
-                    <span class="badge bg-light text-dark border">@rows.Count rows</span>
+                    <span class="badge bg-label-secondary">@rows.Count rows</span>
                 </div>
 
-                <div class="table-responsive border rounded"
-                     style="max-height: 340px; overflow-y: auto;"
+                <div class="table-responsive border rounded truth-result-wrap"
                      tabindex="0"
                      role="region"
                      aria-label="Truth table results">
-                    <table class="table table-sm table-striped table-hover table-bordered align-middle text-center mb-0">
+                    <table class="table table-sm table-striped table-hover align-middle text-center mb-0">
                         <caption class="visually-hidden">Circuit input and output values</caption>
                         <thead class="table-light">
                             <tr>
                                 @foreach (var item in generator.InputIds)
                                 {
                                     <th scope="col" class="px-3 py-2">
-                                        <span class="badge bg-primary mb-1">Input</span>
+                                        <span class="badge bg-label-primary mb-1">Input</span>
                                         <span class="d-block font-monospace">@item</span>
                                     </th>
                                 }
@@ -76,7 +84,7 @@
                                 @foreach (var item in generator.OutputIds)
                                 {
                                     <th scope="col" class="px-3 py-2">
-                                        <span class="badge bg-success mb-1">Output</span>
+                                        <span class="badge bg-label-success mb-1">Output</span>
                                         <span class="d-block font-monospace">@item</span>
                                     </th>
                                 }
@@ -101,15 +109,25 @@
                 </div>
             }
         </div>
-    </section>
+        <footer class="modal-footer">
+            <span class="dialog-footer-note"><span class="signal-zero">0</span> LOW <span class="signal-one">1</span> HIGH</span>
+            <button type="button" class="btn btn-outline-secondary" data-dialog-close>Back to circuit</button>
+        </footer>
+    </div>
+</dialog>
 
-    <section class="card shadow-sm" aria-label="Export HDL">
-        <div class="card-header bg-light py-3">
-            <h2 class="h6 fw-bold mb-1">Export HDL</h2>
-            <p class="small text-muted mb-0">Generate Verilog or SystemVerilog from the circuit.</p>
-        </div>
-
-        <div class="card-body">
+<dialog id="export-hdl-dialog" class="analysis-dialog hdl-dialog" aria-labelledby="export-hdl-dialog-title" aria-describedby="export-hdl-dialog-description">
+    <div class="modal-content">
+        <header class="modal-header">
+            <span class="dialog-title-icon"><i class="bi bi-code-slash" aria-hidden="true"></i></span>
+            <div class="dialog-heading">
+                <h2 id="export-hdl-dialog-title" class="modal-title">Export HDL</h2>
+                <p id="export-hdl-dialog-description">Generate Verilog or SystemVerilog from your circuit.</p>
+            </div>
+            <button type="button" class="btn dialog-expand" data-dialog-expand aria-label="Expand window" aria-pressed="false" title="Expand window"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i></button>
+            <button type="button" class="btn-close" data-dialog-close aria-label="Close Export HDL" title="Close Export HDL"></button>
+        </header>
+        <div class="modal-body accordion-body">
             <div class="mb-3">
                 <label for="analysis-module-name" class="form-label small fw-bold">
                     Module name
@@ -175,15 +193,25 @@
                 </div>
             }
         </div>
-    </section>
+        <footer class="modal-footer">
+            <span class="dialog-footer-note">Download your circuit as a .v or .sv file.</span>
+            <button type="button" class="btn btn-outline-secondary" data-dialog-close>Back to circuit</button>
+        </footer>
+    </div>
+</dialog>
 
-    <section class="card shadow-sm" aria-label="Import HDL">
-        <div class="card-header bg-light py-3">
-            <h2 class="h6 fw-bold mb-1">Import HDL</h2>
-            <p class="small text-muted mb-0">Open a .sv or .v file, or paste HDL code and choose its top module.</p>
-        </div>
-
-        <div class="card-body">
+<dialog id="import-hdl-dialog" class="analysis-dialog hdl-dialog" aria-labelledby="import-hdl-dialog-title" aria-describedby="import-hdl-dialog-description">
+    <div class="modal-content">
+        <header class="modal-header">
+            <span class="dialog-title-icon"><i class="bi bi-upload" aria-hidden="true"></i></span>
+            <div class="dialog-heading">
+                <h2 id="import-hdl-dialog-title" class="modal-title">Import HDL</h2>
+                <p id="import-hdl-dialog-description">Open an HDL file or paste code to build a circuit.</p>
+            </div>
+            <button type="button" class="btn dialog-expand" data-dialog-expand aria-label="Expand window" aria-pressed="false" title="Expand window"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i></button>
+            <button type="button" class="btn-close" data-dialog-close aria-label="Close Import HDL" title="Close Import HDL"></button>
+        </header>
+        <div class="modal-body accordion-body">
             <div class="mb-3">
                 <label for="analysis-hdl-file" class="form-label small fw-bold">Open HDL file (.sv, .v)</label>
                 <InputFile id="analysis-hdl-file" class="form-control mb-2"
@@ -224,7 +252,7 @@
             <button type="button"
                     @onclick="ImportFromVerilog"
                     disabled="@isImporting"
-                    class="btn btn-success w-100 d-inline-flex align-items-center justify-content-center gap-2">
+                    class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2">
                 @if (isImporting)
                 {
                     <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -265,9 +293,12 @@
                 </div>
             }
         </div>
-    </section>
-
-</div>
+        <footer class="modal-footer">
+            <span class="dialog-footer-note">Import replaces the current circuit after validation.</span>
+            <button type="button" class="btn btn-outline-secondary" data-dialog-close>Back to circuit</button>
+        </footer>
+    </div>
+</dialog>
 
 @code {
     [Parameter]

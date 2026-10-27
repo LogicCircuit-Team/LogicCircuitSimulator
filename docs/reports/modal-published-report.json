@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-26",
+  "checks": [
+    {
+      "name": "Published Release opens the centered dialog",
+      "passed": true
+    },
+    {
+      "name": "Published table contains all full-adder columns",
+      "passed": true
+    },
+    {
+      "name": "Published footer fits inside its dialog",
+      "passed": true
+    },
+    {
+      "name": "Published circuit survives dialog close",
+      "passed": true
+    },
+    {
+      "name": "Published styles are served",
+      "passed": true
+    },
+    {
+      "name": "Published page has no JavaScript errors",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "externalAssets": [],
+  "viewports": [],
+  "synthesis": "HTTP fixture for browser import; no new Yosys process test",
+  "phone": "Chromium touch emulation; no physical phone",
+  "passed": 6
+}

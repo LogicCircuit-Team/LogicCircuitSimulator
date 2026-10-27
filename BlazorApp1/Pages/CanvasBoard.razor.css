@@ -1,227 +1,43 @@
+.canvas-board-wrapper{position:relative;display:flex;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;user-select:none}
+.board-toolbar{position:fixed;left:0;top:62px;width:100%;height:52px;z-index:1020;display:flex;align-items:center;flex-wrap:nowrap;gap:14px;padding:0 14px;background:#edf1ee;border-bottom:1px solid #ccd6ce;overflow-x:auto;scrollbar-width:thin}
+.tool-group{display:flex;align-items:center;flex-wrap:nowrap;gap:3px;flex-shrink:0}
+.tool-cluster{padding-right:14px;border-right:1px solid #ccd6ce}
+.command-end{margin-left:auto}
+.board-toolbar .btn{font-size:12px;padding:6px 9px;min-width:34px;height:32px;border:1px solid transparent;color:#5d6b62;white-space:nowrap}
+.board-toolbar .btn:hover{background:#e0e7e2}
+.board-toolbar .btn.active{background:#fff;border-color:#bdcdbf;color:#2d6848}
+.board-toolbar .btn-success{color:#fff}
+.board-toolbar .btn-success:hover{background:#30694c}
+.zoom-value{font-variant-numeric:tabular-nums;min-width:52px!important}
+.status-banner{position:absolute;top:12px;left:12px;z-index:1;display:flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:calc(100% - 24px);padding:4px 8px;font-size:10px;line-height:1.6;pointer-events:none;border-radius:3px}
+.status-normal{background:#ffffffe6;color:#7c8d80}
+.status-error{background:#fff0edef;color:#a43e36}
+.status-edu{background:#e7f1f3ef;color:#356570}
+.canvas-viewport{position:relative;flex:1;width:100%;min-height:0;overflow:hidden;background:#fff;touch-action:none;user-select:none}
+.canvas-viewport canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none}
+.educational-panel{background:#edf4ef;padding:12px;border-top:1px solid #dce2de;max-height:130px;overflow:auto;font-size:11px;flex-shrink:0}
+.edu-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+@media(max-width:991.98px){.board-toolbar{top:54px;height:53px;padding:0 5px;gap:3px;scrollbar-width:none}.tool-group{gap:0}.tool-cluster{padding-right:3px}.board-toolbar .btn{min-height:42px;min-width:34px;padding:6px 7px;font-size:11px}.zoom-value{min-width:45px!important}.status-banner{top:9px;left:6px;max-width:calc(100% - 12px);font-size:9px}.educational-panel{font-size:10px}}
 
-.canvas-board-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    min-width: 0;
-    min-height: 580px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
-    user-select: none;
-}
+.zoom{position:absolute;bottom:16px;right:16px;z-index:2;border:1px solid #d6dfd7;background:#fff;border-radius:4px}
+.zoom .btn{height:34px;min-width:34px;color:#5c7062;font-size:11px;border:0;background:#fff}
+.zoom .btn:hover{background:#edf4ef}
+.canvas-board-wrapper:has(.educational-panel) .zoom{bottom:96px}
+.signal-key{position:absolute;bottom:25px;left:22px;display:flex;align-items:center;gap:6px;color:#88998c;font-size:10px;pointer-events:none}
+.signal-key span{width:14px;height:2px;background:#10b981}
+.signal-key span:nth-of-type(2){background:#64748b;margin-left:7px}
+.canvas-board-wrapper:has(.educational-panel) .signal-key{bottom:105px}
+@media(max-width:991.98px){.zoom .btn{height:42px;min-width:42px}.signal-key{left:12px;bottom:29px}}
 
-.board-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 12px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 13px;
-    z-index: 5;
-}
-
-.tool-group {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.btn-tool {
-    padding: 7px 10px;
-    font-size: 13px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background: #ffffff;
-    color: #1e293b;
-    cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-    .btn-tool:hover:not(:disabled) {
-        background: #e2e8f0;
-        border-color: #94a3b8;
-    }
-
-    .btn-tool:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
-
-    .btn-tool.active-mode {
-        background: #2563eb;
-        color: #ffffff;
-        border-color: #1d4ed8;
-    }
-
-.btn-danger-outline {
-    color: #dc2626;
-    border-color: #fca5a5;
-}
-
-    .btn-danger-outline:hover:not(:disabled) {
-        background: #fef2f2;
-    }
-
-.btn-danger-solid {
-    background: #fee2e2;
-    color: #b91c1c;
-    border-color: #f87171;
-}
-
-    .btn-danger-solid:hover:not(:disabled) {
-        background: #fecaca;
-    }
-
-.btn-edu {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border-color: #93c5fd;
-    font-weight: 600;
-}
-
-.btn-step {
-    background: #16a34a;
-    color: #ffffff;
-    border-color: #15803d;
-    font-weight: 600;
-}
-
-    .btn-step:hover:not(:disabled) {
-        background: #15803d;
-    }
-
-.btn-exit-edu {
-    background: #f59e0b;
-    color: #ffffff;
-    border-color: #d97706;
-}
-
-.status-banner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 9px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    line-height: 1.6;
-    min-height: 36px;
-}
-
-.status-normal {
-    background: #f1f5f9;
-    color: #334155;
-    border: 1px solid #cbd5e1;
-}
-
-.status-error {
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #f87171;
-    font-weight: 600;
-}
-
-.status-edu {
-    background: #eff6ff;
-    color: #1e40af;
-    border: 1px solid #93c5fd;
-}
-
-.validation-alert {
-    display: inline-block;
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fca5a5;
-    padding: 3px 8px;
-    border-radius: 5px;
-    font-size: 12px;
-    overflow-wrap: anywhere;
-}
-
-.canvas-viewport {
-    position: relative;
-    flex: 1;
-    width: 100%;
-    height: 540px;
-    min-height: 420px;
-    overflow: hidden;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background: #ffffff;
-    touch-action: none;
-    user-select: none;
-}
-
-    .canvas-viewport canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-        touch-action: none;
-        user-select: none;
-    }
-
-.educational-panel {
-    border: 1px solid #93c5fd;
-    background: #f8fafc;
-    border-radius: 6px;
-    padding: 10px;
-    max-height: 200px;
-    overflow-y: auto;
-    color: #1e293b;
-}
-
-.edu-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-    color: #1e3a8a;
-}
-
-.badge-stable {
-    background: #dcfce7;
-    color: #15803d;
-    padding: 3px 9px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-@media (max-width: 768px) {
-    .canvas-board-wrapper {
-        min-height: 500px;
-    }
-
-    .board-toolbar {
-        align-items: flex-start;
-        padding: 8px;
-    }
-
-    .tool-group {
-        gap: 5px;
-    }
-
-    .btn-tool {
-        padding: 6px 8px;
-        font-size: 12px;
-    }
-
-    .canvas-viewport {
-        height: 500px;
-        min-height: 400px;
-    }
-
-    .status-banner {
-        align-items: flex-start;
-    }
-}
+.presentation-surface{position:absolute;inset:0;z-index:2;touch-action:none;user-select:none}
+.canvas-scroll-horizontal{position:absolute;left:36px;right:28px;bottom:4px;height:22px;z-index:4;display:flex;align-items:center;padding:0 6px;background:#ffffffed;border-radius:4px}
+.canvas-scroll-vertical{position:absolute;right:4px;top:50px;bottom:34px;width:22px;z-index:4;display:flex;justify-content:center;padding:6px 0;background:#ffffffed;border-radius:4px}
+.canvas-scroll-horizontal input{width:100%;height:14px;margin:0;accent-color:#397b5a;cursor:ew-resize}
+.canvas-scroll-vertical input{writing-mode:vertical-lr;direction:ltr;width:14px;height:100%;margin:0;accent-color:#397b5a;cursor:ns-resize}
+.zoom{right:30px;bottom:34px;z-index:4}
+.signal-key{bottom:46px}
+.canvas-board-wrapper:has(.educational-panel) .canvas-scroll-horizontal{bottom:88px}
+.canvas-board-wrapper:has(.educational-panel) .canvas-scroll-vertical{bottom:118px}
+.canvas-board-wrapper:has(.educational-panel) .zoom{bottom:118px}
+.truth-table-shortcut{font-weight:600;color:#28583f!important;background:#ffffffb3}
+@media(max-width:991.98px){.board-toolbar{gap:2px}.board-toolbar .truth-table-shortcut{padding:6px;gap:4px;font-size:10px}.signal-key{bottom:48px}.canvas-scroll-horizontal{left:8px}}

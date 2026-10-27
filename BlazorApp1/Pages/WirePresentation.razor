@@ -1,0 +1,38 @@
+@using BlazorApp1.Presentation
+@using System.Globalization
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<svg class="wire-presentation" viewBox="@($"0 0 {Number(Scene.Width)} {Number(Scene.Height)}")" aria-hidden="true">
+    <g transform="@($"translate({Number(Scene.PanX)} {Number(Scene.PanY)}) scale({Number(Scene.Zoom)})")">
+        @foreach (var route in Scene.Routes)
+        {
+            var color = ReferenceEquals(route.Wire, Scene.Selected) ? "#f59e0b" : route.Wire.SourceGate.Output ? "#10b981" : "#64748b";
+            var width = ReferenceEquals(route.Wire, Scene.Selected) ? 4 : route.Wire.SourceGate.Output ? 3 : 2.2;
+            <g class="routed-wire" data-source="@route.Wire.SourceGate.Id" data-target="@route.Wire.TargetGate.Id" data-input="@route.Wire.TargetInputIndex">
+                <path class="wire-clearance" d="@Path(route.Points)" vector-effect="non-scaling-stroke" />
+                <path class="wire-signal" d="@Path(route.Points)" stroke="@color" stroke-width="@Number(width)" vector-effect="non-scaling-stroke" />
+            </g>
+        }
+    </g>
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public BoardScene Scene { get; set; } = default!;
+    [Parameter, EditorRequired] public string ViewportId { get; set; } = string.Empty;
+    private bool installed;
+    private static string Number(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    private static string Path(IReadOnlyList<BoardPoint> points) => string.Join(" ", points.Select((point, index) => $"{(index == 0 ? "M" : "L")} {Number(point.X)} {Number(point.Y)}"));
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!installed) installed = await JS.InvokeAsync<bool>("circuitPresentation.installWires", ViewportId);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!installed) return;
+        try { await JS.InvokeVoidAsync("circuitPresentation.removeWires", ViewportId); }
+        catch (JSDisconnectedException) { }
+    }
+}

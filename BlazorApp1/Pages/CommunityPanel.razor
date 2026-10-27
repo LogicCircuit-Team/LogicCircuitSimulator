@@ -7,7 +7,7 @@
 
 <div class="community-layout">
     <section class="card publish-panel" aria-labelledby="publish-title">
-        <div class="card-header section-heading">
+        <div class="card-header section-heading border-bottom">
             <h2 id="publish-title" class="card-title">Share your circuit</h2>
             <p>Publish a copy of the circuit on your board.</p>
         </div>
@@ -31,7 +31,7 @@
             </div>
             <button type="button" class="btn btn-outline-secondary" @onclick="RefreshCircuits" disabled="@isBusy">Refresh</button>
         </div>
-        <form class="community-search" @onsubmit="SearchCircuits" @onsubmit:preventDefault>
+        <form class="community-search input-group input-group-merge" @onsubmit="SearchCircuits" @onsubmit:preventDefault>
             <label class="visually-hidden" for="community-search">Search circuits or authors</label>
             <input id="community-search" class="form-control" @bind="search" maxlength="100" placeholder="Search circuits or authors" disabled="@isBusy" />
             <button type="submit" class="btn btn-outline-primary" disabled="@isBusy">Search</button>
@@ -51,7 +51,7 @@
         }
         @if (!isBusy && circuits.Count == 0 && string.IsNullOrEmpty(errorMessage))
         {
-            <div class="empty-state"><h3>No circuits found</h3><p>Try another search, or publish a circuit from your board.</p></div>
+            <div class="empty-state card card-body"><span class="avatar avatar-lg rounded bg-label-primary mx-auto mb-4"><i class="bi bi-people" aria-hidden="true"></i></span><h3>No circuits found</h3><p>Try another search, or publish a circuit from your board.</p></div>
         }
         <div class="community-cards">
             @foreach (var circuit in circuits)
@@ -59,10 +59,10 @@
                 <article class="card community-card" @key="circuit.SharedCircuitId">
                     <div class="card-body">
                         <div class="d-flex justify-content-between gap-2 align-items-start">
-                            <h3>@circuit.Name</h3>
+                            <div class="d-flex align-items-center gap-3"><span class="avatar avatar-sm bg-label-primary rounded"><i class="bi bi-cpu" aria-hidden="true"></i></span><h3>@circuit.Name</h3></div>
                             @if (circuit.IsMine)
                             {
-                                <span class="badge bg-blue-lt">Yours</span>
+                                <span class="badge bg-label-primary">Yours</span>
                             }
                         </div>
                         <p class="community-author">By @circuit.AuthorName · @circuit.PublishedAt.ToLocalTime().ToString("dd MMM yyyy")</p>

@@ -1,0 +1,304 @@
+{
+  "template": "Logic-Space-Classic-Bulb",
+  "checks": [
+    {
+      "name": "Template identity and local icon font",
+      "passed": true
+    },
+    {
+      "name": "Desktop side panels are visible",
+      "passed": true
+    },
+    {
+      "name": "Desktop panel controls are available",
+      "passed": true
+    },
+    {
+      "name": "Full-adder JSON creates ten components and twelve connections",
+      "passed": true
+    },
+    {
+      "name": "Fit circuit preserves a positive canvas size",
+      "passed": true
+    },
+    {
+      "name": "Twelve routed wires are visible",
+      "passed": true
+    },
+    {
+      "name": "Original wire strokes are replaced only on this canvas",
+      "passed": true
+    },
+    {
+      "name": "Truth row 000",
+      "passed": true
+    },
+    {
+      "name": "Truth row 001",
+      "passed": true
+    },
+    {
+      "name": "Truth row 010",
+      "passed": true
+    },
+    {
+      "name": "Truth row 011",
+      "passed": true
+    },
+    {
+      "name": "Truth row 100",
+      "passed": true
+    },
+    {
+      "name": "Truth row 101",
+      "passed": true
+    },
+    {
+      "name": "Truth row 110",
+      "passed": true
+    },
+    {
+      "name": "Truth row 111",
+      "passed": true
+    },
+    {
+      "name": "Truth section collapses",
+      "passed": true
+    },
+    {
+      "name": "SystemVerilog export is shown",
+      "passed": true
+    },
+    {
+      "name": "SystemVerilog download name",
+      "passed": true
+    },
+    {
+      "name": "Changing HDL dialect invalidates old output",
+      "passed": true
+    },
+    {
+      "name": "Verilog export uses wire",
+      "passed": true
+    },
+    {
+      "name": "Verilog download name",
+      "passed": true
+    },
+    {
+      "name": "Invalid module name is rejected",
+      "passed": true
+    },
+    {
+      "name": "SQLite save works from the restyled files panel",
+      "passed": true
+    },
+    {
+      "name": "SQLite load restores the full adder",
+      "passed": true
+    },
+    {
+      "name": "Existing educational step mode runs",
+      "passed": true
+    },
+    {
+      "name": "Run simulation exits step mode",
+      "passed": true
+    },
+    {
+      "name": "Horizontal slider moves the viewport",
+      "passed": true
+    },
+    {
+      "name": "Vertical slider moves the viewport",
+      "passed": true
+    },
+    {
+      "name": "Sliders keep all gates and wires",
+      "passed": true
+    },
+    {
+      "name": "Library width changes by dragging its edge",
+      "passed": true
+    },
+    {
+      "name": "Desktop library collapses",
+      "passed": true
+    },
+    {
+      "name": "Desktop inspector collapses",
+      "passed": true
+    },
+    {
+      "name": "Truth shortcut reopens the inspector",
+      "passed": true
+    },
+    {
+      "name": "Community publish works with SQLite",
+      "passed": true
+    },
+    {
+      "name": "Community search filters publications",
+      "passed": true
+    },
+    {
+      "name": "Open copy returns to the original circuit engine",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 320",
+      "passed": true
+    },
+    {
+      "name": "Analysis drawer button fits at 320",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 390",
+      "passed": true
+    },
+    {
+      "name": "Analysis drawer button fits at 390",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 768",
+      "passed": true
+    },
+    {
+      "name": "Analysis drawer button fits at 768",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 991",
+      "passed": true
+    },
+    {
+      "name": "Analysis drawer button fits at 991",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 992",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 1024",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 1440",
+      "passed": true
+    },
+    {
+      "name": "No horizontal document overflow at 1600",
+      "passed": true
+    },
+    {
+      "name": "Mobile library uses Bootstrap offcanvas",
+      "passed": true
+    },
+    {
+      "name": "Mobile analysis is available",
+      "passed": true
+    },
+    {
+      "name": "Mobile truth table still has eight rows",
+      "passed": true
+    },
+    {
+      "name": "Drawer backdrop is removed",
+      "passed": true
+    },
+    {
+      "name": "Community fits the mobile viewport",
+      "passed": true
+    },
+    {
+      "name": "Returning from community restores the canvas",
+      "passed": true
+    },
+    {
+      "name": "SystemVerilog file uses the existing request contract",
+      "passed": true
+    },
+    {
+      "name": "HDL response fixture is imported by the existing adapter",
+      "passed": true
+    },
+    {
+      "name": "Files panel accepts SystemVerilog too",
+      "passed": true
+    },
+    {
+      "name": "Zoom controls remain functional",
+      "passed": true
+    },
+    {
+      "name": "Reset view returns to 100 percent",
+      "passed": true
+    },
+    {
+      "name": "No JavaScript page errors",
+      "passed": true
+    },
+    {
+      "name": "All UI assets are local",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "externalUiRequests": [],
+  "viewports": [
+    {
+      "viewport": 320,
+      "document": 320,
+      "toolbar": 320,
+      "toolbarWidth": 320
+    },
+    {
+      "viewport": 390,
+      "document": 390,
+      "toolbar": 390,
+      "toolbarWidth": 390
+    },
+    {
+      "viewport": 768,
+      "document": 768,
+      "toolbar": 768,
+      "toolbarWidth": 768
+    },
+    {
+      "viewport": 991,
+      "document": 991,
+      "toolbar": 991,
+      "toolbarWidth": 991
+    },
+    {
+      "viewport": 992,
+      "document": 992,
+      "toolbar": 992,
+      "toolbarWidth": 992
+    },
+    {
+      "viewport": 1024,
+      "document": 1024,
+      "toolbar": 1024,
+      "toolbarWidth": 1024
+    },
+    {
+      "viewport": 1440,
+      "document": 1440,
+      "toolbar": 1440,
+      "toolbarWidth": 1440
+    },
+    {
+      "viewport": 1600,
+      "document": 1600,
+      "toolbar": 1600,
+      "toolbarWidth": 1600
+    }
+  ],
+  "hdl": "HTTP response fixture; no real Yosys invocation",
+  "sourceCode": "All original 49 C# files, seven original Razor @code blocks and circuit-ui.js unchanged; separate presentation extensions added",
+  "passed": 61
+}

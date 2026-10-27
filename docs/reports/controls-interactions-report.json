@@ -1,0 +1,71 @@
+{
+  "checks": [
+    {
+      "name": "Switch click reaches the original simulation",
+      "passed": true
+    },
+    {
+      "name": "Routed wire displays its live signal",
+      "passed": true
+    },
+    {
+      "name": "Gate dragging changes only its position",
+      "passed": true
+    },
+    {
+      "name": "Wire routes follow a moved gate",
+      "passed": true
+    },
+    {
+      "name": "Navigation sliders preserve saved circuit coordinates",
+      "passed": true
+    },
+    {
+      "name": "Routed wire can be selected",
+      "passed": true
+    },
+    {
+      "name": "Selected routed wire is highlighted",
+      "passed": true
+    },
+    {
+      "name": "Delete removes the selected electrical connection",
+      "passed": true
+    },
+    {
+      "name": "Original component buttons create four gates",
+      "passed": true
+    },
+    {
+      "name": "Original pin dragging creates three routed connections",
+      "passed": true
+    },
+    {
+      "name": "Duplicate input drivers remain rejected",
+      "passed": true
+    },
+    {
+      "name": "Right click deletes a routed wire",
+      "passed": true
+    },
+    {
+      "name": "Touch toggles a switch once",
+      "passed": true
+    },
+    {
+      "name": "Phone Truth Table shortcut opens the generated table",
+      "passed": true
+    },
+    {
+      "name": "Phone slider works after closing its drawer",
+      "passed": true
+    },
+    {
+      "name": "No interaction page errors",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "device": "Chromium desktop and touch emulation; not a physical phone",
+  "passed": 16
+}

@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-26",
+  "unchanged_csharp_files": 52,
+  "unchanged_razor_code_blocks": 8,
+  "unchanged_circuit_ui_js": true,
+  "debug_build_warnings": 0,
+  "debug_build_errors": 0,
+  "release_publish": "succeeded",
+  "browser_checks_passed": 55,
+  "published_smoke_checks_passed": 6,
+  "document_pages": 64,
+  "document_changed_pages_reviewed": [
+    56,
+    58,
+    63,
+    64
+  ],
+  "document_unchanged_pages": 60,
+  "new_yosys_process_run": false,
+  "physical_phone_test": false,
+  "actual_azure_deployment": false,
+  "new_docker_build": false
+}

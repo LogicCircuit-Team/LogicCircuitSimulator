@@ -1,0 +1,22 @@
+@font-face{font-display:block;font-family:bootstrap-icons;src:url("bootstrap-icons.woff") format("woff")}
+.bi::before,[class^="bi-"]::before,[class*=" bi-"]::before{display:inline-block;font-family:bootstrap-icons!important;font-style:normal;font-weight:normal!important;font-variant:normal;text-transform:none;line-height:1;vertical-align:-.125em;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.bi-arrow-counterclockwise::before { content: "\f117"; }
+.bi-arrows-fullscreen::before { content: "\f14d"; }
+.bi-code-slash::before { content: "\f2c6"; }
+.bi-cpu::before { content: "\f2d6"; }
+.bi-dash::before { content: "\f2ea"; }
+.bi-diagram-3::before { content: "\f2ee"; }
+.bi-download::before { content: "\f30a"; }
+.bi-file-earmark::before { content: "\f392"; }
+.bi-floppy::before { content: "\f7d8"; }
+.bi-grid::before { content: "\f3fc"; }
+.bi-hand-index::before { content: "\f403"; }
+.bi-people::before { content: "\f4d0"; }
+.bi-play-circle::before { content: "\f4f3"; }
+.bi-play-fill::before { content: "\f4f4"; }
+.bi-plus::before { content: "\f4fe"; }
+.bi-skip-forward-fill::before { content: "\f55d"; }
+.bi-sliders::before { content: "\f56b"; }
+.bi-table::before { content: "\f5aa"; }
+.bi-trash3::before { content: "\f78b"; }
+.bi-upload::before { content: "\f603"; }

@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "problems": [
+    {
+      "project": "/workspace/scratch/61ecc44c02cd/work/classic/project/LogicCircuitSimulator-Final/tests/ApiChecks/ApiChecks.csproj",
+      "level": "error",
+      "text": "No assets file was found for `/workspace/scratch/61ecc44c02cd/work/classic/project/LogicCircuitSimulator-Final/tests/ApiChecks/ApiChecks.csproj`. Please run restore before running this command."
+    }
+  ],
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "BlazorApp1/BlazorApp1.csproj"
+    },
+    {
+      "path": "CircuitApi/CircuitApi.csproj"
+    },
+    {
+      "path": "LogicCore/LogicCore.csproj"
+    },
+    {
+      "path": "tests/ApiChecks/ApiChecks.csproj"
+    },
+    {
+      "path": "tests/LogicCoreChecks/LogicCoreChecks.csproj"
+    }
+  ]
+}

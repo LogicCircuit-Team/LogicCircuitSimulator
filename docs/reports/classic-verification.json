@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-26",
+  "unchanged_csharp_files": 49,
+  "unchanged_razor_code_blocks": 7,
+  "circuit_ui_js_unchanged": true,
+  "api_and_deployment_configuration_unchanged": true,
+  "core_checks_passed": 60,
+  "browser_checks_passed": 52,
+  "build_warnings": 0,
+  "build_errors": 0,
+  "icon_glyphs": 20,
+  "template_original_icon_woff_bytes": 176032,
+  "bundled_icon_woff_bytes": 2812,
+  "document_pages": 55
+}

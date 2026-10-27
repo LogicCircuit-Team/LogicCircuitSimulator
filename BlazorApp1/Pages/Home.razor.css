@@ -1,45 +1,38 @@
-.logic-home { min-height: 100dvh; background: #f5f7fa; color: #253044; }
-.logic-home .navbar { min-height: 64px; border-bottom: 1px solid #e1e6ed; box-shadow: none; }
-.logic-home .navbar-brand { font-size: 1.05rem; font-weight: 650; letter-spacing: -.025em; }
-.logic-home .page-wrapper { margin: 0; min-height: 0; }
-.logic-home .page-header { margin: 20px 0 16px; }
-.logic-home .page-title { font-size: 1.45rem; font-weight: 650; letter-spacing: -.025em; }
-.logic-home .page-pretitle { font-size: .65rem; letter-spacing: .12em; color: #768295; margin-bottom: 4px; }
-.page-description { margin: 5px 0 0; color: #68758a; font-size: .85rem; }
-.logic-home .page-body { margin: 0 0 20px; }
-.workspace-tabs { display: flex; align-items: center; gap: 4px; }
-.workspace-tab { border: 0; background: transparent; padding: 8px 13px; border-radius: 7px; color: #657187; font: inherit; font-size: .85rem; cursor: pointer; }
-.workspace-tab:hover { background: #f0f3f8; color: #253044; }
-.workspace-tab.active { background: #eaf0ff; color: #315bc3; font-weight: 600; }
-.workspace-tab:focus-visible { outline: 2px solid #315bc3; outline-offset: 2px; }
-.workspace-grid { display: grid; grid-template-columns: 15rem minmax(0, 1fr) 23rem; gap: 16px; height: calc(100dvh - 188px); min-height: 34rem; }
-.workspace-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; margin: 0; border: 1px solid #dfe5ed; border-radius: 12px; box-shadow: 0 2px 6px #192b4505; overflow: hidden; }
-.workspace-panel > .card-header { flex: 0 0 auto; min-height: 54px; padding: 14px 16px; border-bottom: 1px solid #e6eaf0; }
-.workspace-panel > .card-header .card-title { font-size: .9rem; font-weight: 600; }
-.workspace-panel > .card-body { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 14px; scrollbar-width: thin; scrollbar-color: #c9d1de transparent; }
-.canvas-host { display: flex; padding: 0 !important; }
-.canvas-panel > .card-header { background: #fff; }
-.mobile-panel-tabs { display: none; }
-@media (max-width: 1399.98px) { .workspace-grid { grid-template-columns: 13.5rem minmax(0, 1fr) 20rem; gap: 12px; } }
-@media (max-width: 1099.98px) {
-    .workspace-grid { grid-template-columns: 14rem minmax(0, 1fr); height: auto; }
-    .canvas-panel { height: 36rem; }
-    .analysis-panel { grid-column: 1 / -1; }
-}
-@media (max-width: 767.98px) {
-    .mobile-panel-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-    .mobile-panel-tabs button { flex: 1; background: #fff; border: 1px solid #d8e0eb; border-radius: 7px; padding: 9px 5px; color: #657187; font-size: .75rem; }
-    .mobile-panel-tabs button.active { color: #315bc3; background: #eaf0ff; border-color: #b8c8ee; font-weight: 600; }
-    .mobile-panel-board .tools-panel, .mobile-panel-board .analysis-panel,
-    .mobile-panel-tools .canvas-panel, .mobile-panel-tools .analysis-panel,
-    .mobile-panel-analysis .tools-panel, .mobile-panel-analysis .canvas-panel { display: none; }
-    .workspace-grid { grid-template-columns: minmax(0, 1fr); }
-    .workspace-panel { max-height: none; }
-    .analysis-panel { max-height: none; }
-    .canvas-panel { min-height: 28rem; }
-    .canvas-panel { height: calc(100dvh - 265px); }
-    .logic-home .navbar-brand { font-size: .95rem; white-space: normal; }
-    .logic-home .navbar .container-fluid { flex-wrap: wrap; gap: 10px !important; padding: 12px 16px; }
-    .workspace-tabs { order: 3; width: 100%; }
-    .page-description { max-width: 28rem; }
-}
+.logic-home{height:100dvh;min-height:400px;display:flex;flex-direction:column}
+.app-header{flex:0 0 62px;position:relative;z-index:1030}
+.header-actions .btn{display:flex;align-items:center;justify-content:center;gap:5px;min-height:34px}
+.workspace-view{flex:1;min-height:0;padding-top:52px}
+.editor{height:100%;grid-template-columns:230px minmax(0,1fr) 290px}
+.library,.inspector{min-width:0;min-height:0;scrollbar-width:thin;overscroll-behavior:contain}
+.panel-title{margin:0;flex-shrink:0}
+.workbench{min-height:0;height:100%}
+.circuit-tab{flex:0 0 42px}
+.circuit-tab h1{font-size:12px;font-weight:400;color:#405848}
+.circuit-tab span{font-size:10px}
+#canvasHost{min-height:0;display:flex}
+.library-foot{margin:0;border-top:1px solid var(--line)}
+.analysis-body{padding:0}
+.circuit-status{border-top:1px solid var(--line)}
+.circuit-status dl{display:grid;grid-template-columns:1fr auto;gap:10px;padding:16px 15px 0;font-size:11px;margin-bottom:12px}
+.circuit-status dt{font-weight:400;color:#607065}
+.circuit-status dd{margin:0;font-variant-numeric:tabular-nums}
+.circuit-status p{padding:0 15px 16px;margin:0;color:#7c8d80;font-size:11px;line-height:1.8}
+.community-view{flex:1;min-height:0;overflow:auto;padding:28px;scrollbar-width:thin}
+.app-footer{height:28px;flex:0 0 28px}
+.offcanvas-header{min-height:58px}
+.offcanvas-title{font-size:14px}
+@media(min-width:1800px){.editor{grid-template-columns:250px minmax(0,1fr) 320px}}
+@media(max-width:991.98px){.logic-home{min-height:320px}.app-header{flex-basis:54px;gap:8px}.header-actions{gap:5px}.header-actions .btn{padding:6px 9px;min-width:38px}.header-actions .btn span{display:inline;font-size:11px}.workspace-view{padding-top:53px}.editor{height:100%}.library,.inspector{width:min(320px,90vw)!important;max-width:90vw;height:100%;overflow-y:auto;overscroll-behavior:contain}.library{width:min(280px,90vw)!important}.circuit-tab{flex-basis:36px}.community-view{padding:18px 12px}}
+@media(max-width:359.98px){.header-actions .btn span{display:none}.identity{font-size:14px}}
+
+.editor{position:relative;grid-template-columns:var(--library-width,230px) minmax(0,1fr) var(--analysis-width,290px);transition:grid-template-columns .2s ease}
+.panel-resizer{position:absolute;top:0;bottom:0;width:8px;z-index:5;cursor:col-resize;touch-action:none;background:transparent}
+.panel-resizer:hover,.panel-resizer:focus-visible{background:#397b5a44;outline:none}
+.library-resizer{left:calc(var(--library-width,230px) - 4px)}
+.analysis-resizer{right:calc(var(--analysis-width,290px) - 4px)}
+.logic-home[data-library-collapsed="true"] .editor{grid-template-columns:0 minmax(0,1fr) var(--analysis-width,290px)}
+.logic-home[data-analysis-collapsed="true"] .editor{grid-template-columns:var(--library-width,230px) minmax(0,1fr) 0}
+.logic-home[data-library-collapsed="true"][data-analysis-collapsed="true"] .editor{grid-template-columns:0 minmax(0,1fr) 0}
+.logic-home[data-library-collapsed="true"] .library,.logic-home[data-analysis-collapsed="true"] .inspector{visibility:hidden;overflow:hidden}
+.logic-home[data-library-collapsed="true"] .library-resizer,.logic-home[data-analysis-collapsed="true"] .analysis-resizer{display:none}
+@media(max-width:991.98px){.panel-resizer{display:none}.logic-home[data-library-collapsed] .library,.logic-home[data-analysis-collapsed] .inspector{visibility:visible;overflow:auto}}

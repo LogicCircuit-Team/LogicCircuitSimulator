@@ -1,0 +1,304 @@
+{
+  "date": "2026-10-26",
+  "checks": [
+    {
+      "name": "All three analysis windows start closed",
+      "passed": true
+    },
+    {
+      "name": "Three launch cards replace the narrow forms",
+      "passed": true
+    },
+    {
+      "name": "Toolbar opens a native modal in the top layer",
+      "passed": true
+    },
+    {
+      "name": "Truth table is wide and centered",
+      "passed": true
+    },
+    {
+      "name": "All five full-adder columns are visible without side-panel clipping",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 000",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 001",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 010",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 011",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 100",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 101",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 110",
+      "passed": true
+    },
+    {
+      "name": "Full-adder row 111",
+      "passed": true
+    },
+    {
+      "name": "Keyboard focus stays inside the open window",
+      "passed": true
+    },
+    {
+      "name": "Background is blocked while the window is open",
+      "passed": true
+    },
+    {
+      "name": "Expand window uses the available screen width",
+      "passed": true
+    },
+    {
+      "name": "Restore returns to the centered size",
+      "passed": true
+    },
+    {
+      "name": "Truth table footer is fully inside its window",
+      "passed": true
+    },
+    {
+      "name": "Escape restores focus to the toolbar",
+      "passed": true
+    },
+    {
+      "name": "Closing does not remove the circuit",
+      "passed": true
+    },
+    {
+      "name": "Collapsed-sidebar dialog remains exposed to assistive technology",
+      "passed": true
+    },
+    {
+      "name": "Truth table opens when its original sidebar is collapsed",
+      "passed": true
+    },
+    {
+      "name": "Backdrop closes the window",
+      "passed": true
+    },
+    {
+      "name": "Collapsed sidebar state is restored",
+      "passed": true
+    },
+    {
+      "name": "Export uses the existing generator",
+      "passed": true
+    },
+    {
+      "name": "SystemVerilog download works",
+      "passed": true
+    },
+    {
+      "name": "Changing dialect invalidates the previous output",
+      "passed": true
+    },
+    {
+      "name": "Verilog generation still uses wire",
+      "passed": true
+    },
+    {
+      "name": "Closing and reopening preserves the generated code",
+      "passed": true
+    },
+    {
+      "name": "Export validation errors remain visible",
+      "passed": true
+    },
+    {
+      "name": "Import file keeps the agreed API contract",
+      "passed": true
+    },
+    {
+      "name": "Import leaves all original gates and wires available",
+      "passed": true
+    },
+    {
+      "name": "File import from the library opens the import window",
+      "passed": true
+    },
+    {
+      "name": "SQLite save still works after closing dialogs",
+      "passed": true
+    },
+    {
+      "name": "SQLite load restores the original circuit",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 320",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 390",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 768",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 991",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 992",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 1024",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 1440",
+      "passed": true
+    },
+    {
+      "name": "Dialog fits viewport 1600",
+      "passed": true
+    },
+    {
+      "name": "Large truth table keeps every generated row",
+      "passed": true
+    },
+    {
+      "name": "Large results scroll inside the window",
+      "passed": true
+    },
+    {
+      "name": "Large table keeps the close action visible",
+      "passed": true
+    },
+    {
+      "name": "Touch shortcut opens the full table",
+      "passed": true
+    },
+    {
+      "name": "Phone can scroll to the output columns",
+      "passed": true
+    },
+    {
+      "name": "Opening a tool dismisses the mobile drawer backdrop",
+      "passed": true
+    },
+    {
+      "name": "Phone export still generates the circuit",
+      "passed": true
+    },
+    {
+      "name": "After closing, the phone has no stuck overlay",
+      "passed": true
+    },
+    {
+      "name": "Switch touch still reaches the original simulator",
+      "passed": true
+    },
+    {
+      "name": "Dialogs do not duplicate HTML identifiers",
+      "passed": true
+    },
+    {
+      "name": "No browser JavaScript errors",
+      "passed": true
+    },
+    {
+      "name": "UI assets remain local",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "externalAssets": [],
+  "viewports": [
+    {
+      "width": 320,
+      "height": 844,
+      "left": 12,
+      "right": 308,
+      "top": 85.5,
+      "bottom": 774.484375,
+      "document": 320
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "left": 12,
+      "right": 378,
+      "top": 87.90625,
+      "bottom": 772.09375,
+      "document": 390
+    },
+    {
+      "width": 768,
+      "height": 844,
+      "left": 32,
+      "right": 736,
+      "top": 69.40625,
+      "bottom": 790.59375,
+      "document": 768
+    },
+    {
+      "width": 991,
+      "height": 844,
+      "left": 32,
+      "right": 959,
+      "top": 69.40625,
+      "bottom": 790.59375,
+      "document": 991
+    },
+    {
+      "width": 992,
+      "height": 900,
+      "left": 32,
+      "right": 960,
+      "top": 97.40625,
+      "bottom": 818.59375,
+      "document": 992
+    },
+    {
+      "width": 1024,
+      "height": 900,
+      "left": 32,
+      "right": 992,
+      "top": 97.40625,
+      "bottom": 818.59375,
+      "document": 1024
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "left": 160,
+      "right": 1280,
+      "top": 97.40625,
+      "bottom": 818.59375,
+      "document": 1440
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "left": 240,
+      "right": 1360,
+      "top": 97.40625,
+      "bottom": 818.59375,
+      "document": 1600
+    }
+  ],
+  "synthesis": "HTTP fixture for browser import; no new Yosys process test",
+  "phone": "Chromium touch emulation; no physical phone",
+  "passed": 55
+}

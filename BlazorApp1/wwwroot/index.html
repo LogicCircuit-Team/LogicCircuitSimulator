@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Logic Circuit Simulator</title>
+    <title>Logic Space · Logic Circuit Simulator</title>
 
     <base href="/" />
-    <link rel="stylesheet" href="vendor/tabler/tabler.min.css" />
+    <link rel="stylesheet" href="vendor/logic-space/bootstrap.min.css" />
+    <link rel="stylesheet" href="vendor/logic-space/icons.css" />
+    <link rel="stylesheet" href="vendor/logic-space/style.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link href="BlazorApp1.styles.css" rel="stylesheet" />
+    <link rel="stylesheet" href="css/analysis-dialogs.css" />
 
     <link rel="icon" type="image/png" href="favicon.png" />
 </head>
@@ -30,7 +33,9 @@
         <span class="dismiss">🗙</span>
     </div>
 
+    <script src="vendor/logic-space/bootstrap.bundle.min.js"></script>
     <script src="js/circuit-ui.js"></script>
+    <script src="js/circuit-presentation.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 </html>

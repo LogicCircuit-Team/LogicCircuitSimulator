@@ -13,7 +13,10 @@ The application uses the team's original `LogicCore` engine. The final integrati
 - Export `.v` or `.sv` files and import HDL through Yosys with `read_slang`.
 - Save, load, update and delete circuits in a database.
 - Publish a circuit snapshot, browse and search community circuits, and open an independent copy.
-- Use a phone layout with Components, Circuit board and Analysis tabs, touch wiring and Fit circuit.
+- Open Truth Table in a wide centered window, with expand, close and keyboard controls.
+- Open Import HDL and Export HDL in matching windows, and return to the same circuit.
+- Collapse or resize side panels on desktop, and use sliding panels on a phone.
+- Navigate with horizontal and vertical sliders and touch controls. Wires use separate orthogonal routes with visible crossover clearance.
 
 The HDL adapter accepts single-bit combinational cells `$_AND_`, `$_OR_`, `$_NOT_`, `$_NAND_`, `$_NOR_` and `$_XOR_`. Flip-flops, memories, buses and constant-bit connections are outside this version. An unsupported import leaves the current circuit intact. The existing Step controls expose signal transfer and gate evaluation; they are not a clocked sequential simulator.
 
@@ -43,10 +46,9 @@ SQL Server LocalDB must be installed. The script applies the SQL Server migratio
 
 ```powershell
 .\scripts\Start-Local.ps1 -Lan
-ipconfig
 ```
 
-Open `http://YOUR-PC-IPv4:5210` on the phone, with both devices on the same Wi-Fi. Allow the application through Windows Firewall on that private network if Windows asks. `localhost` on the phone refers to the phone itself. Keep the PC and application running. Public hosting uses HTTPS and a server URL instead.
+Keep that window running. Open a second PowerShell window and run `ipconfig` to find the Wi-Fi IPv4 address. Open `http://YOUR-PC-IPv4:5210` on the phone, with both devices on the same Wi-Fi. Allow the application through Windows Firewall on that private network if Windows asks. `localhost` on the phone refers to the phone itself. Keep the PC and application running. Public hosting uses HTTPS and a server URL instead.
 
 ## Try a full adder
 
@@ -72,11 +74,11 @@ Community publications are public snapshots. Editing an opened copy does not cha
 | `deployment` | Azure infrastructure definition |
 | `scripts` | Local startup, checks and Azure deployment |
 
-The interface uses the bundled MIT-licensed Tabler 1.6.0 theme, based on Bootstrap 5. It does not need an external CSS CDN. Third-party notices are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The interface adapts the supplied **Logic Space Classic Bulb** template. Its white and green workbench, component library, Bootstrap 5.3.3 controls and Bootstrap Icons 1.11.3 are bundled locally. Phone panels use Bootstrap Offcanvas. Analysis dialogs use the browser's native dialog element with Bootstrap styling, so their content is not clipped by a sidebar. The existing C# generation and import methods are reused. The existing C# canvas renderer and logic engine remain in use; the template's independent JavaScript simulator and Konva are not included. The separate presentation extension supplies wire routes and matching hit testing without changing the original renderer or any original C# file or Razor `@code` block. Pan and zoom affect the view, not the saved gate coordinates. Shared-source leads can meet; separated crossings are not electrical junctions. Dense or overlapping gate arrangements can still need manual gate placement. Only the twenty used icons are packaged in a small local font. Third-party notices are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Deploy before publishing the repository
 
-[docs/AZURE.md](docs/AZURE.md) covers a single HTTPS application with Azure SQL, persistent browser-session keys and a Linux container containing Yosys. Deployment builds directly from these local files; GitHub is not required.
+Start with the detailed Arabic guide [docs/AZURE_AR.md](docs/AZURE_AR.md). The new `scripts/Deploy-Azure-Student.ps1` builds on local Docker and pushes to ACR, avoiding ACR Tasks on free-credit accounts. [docs/AZURE.md](docs/AZURE.md) covers a single HTTPS application with Azure SQL, persistent browser-session keys and a Linux container containing Yosys. Deployment builds directly from these local files; GitHub is not required.
 
 The Azure script creates **paid** App Service B1, Azure SQL Basic and Container Registry Basic resources in your selected subscription. Review the subscription and resource group before running it. No cloud URL or completed Azure test is claimed in this package.
 
@@ -94,6 +96,7 @@ Set a strong `SQL_PASSWORD` in `.env`, then open `http://localhost:8080`. Docker
 
 ```powershell
 .\scripts\Run-Checks.ps1
+dotnet run --project tests/PresentationChecks
 .\scripts\Run-Checks.ps1 -ApiBaseUrl https://localhost:7178/
 ```
 

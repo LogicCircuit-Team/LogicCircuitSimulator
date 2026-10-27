@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-26",
+  "original_csharp_files_unchanged": 49,
+  "original_razor_code_blocks_unchanged": 7,
+  "original_circuit_ui_js_unchanged": true,
+  "new_presentation_csharp_files": 2,
+  "new_presentation_test_program": 1,
+  "core_checks": 60,
+  "route_checks": 12,
+  "browser_acceptance_checks": 61,
+  "interaction_checks": 16,
+  "deployment_script_mock_checks": 13,
+  "debug_build": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "release_publish": "succeeded; externally configured in-process MSBuild tasks for this host only",
+  "published_artifact_smoke": "Production environment, SQLite database, full-adder JSON, truth table, save and load after browser reload passed",
+  "bicep_compile": "0.48.1 passed",
+  "powershell_parse": "7.6.9 passed for all four scripts",
+  "known_nuget_vulnerabilities_reported": 0,
+  "dependency_projects_audited": 5,
+  "new_yosys_process_test": false,
+  "docker_image_build_test": false,
+  "actual_azure_deployment": false,
+  "azure_sql_runtime_test": false,
+  "physical_phone_test": false,
+  "document_pages": 62,
+  "document_visual_review": "All 19 changed/new page images inspected; 43 pages pixel-identical to the previously reviewed version",
+  "linux_suite_download_asset": "Official 2026-10-20 Linux x64 asset responded HTTP 200 to HEAD; not downloaded or run"
+}

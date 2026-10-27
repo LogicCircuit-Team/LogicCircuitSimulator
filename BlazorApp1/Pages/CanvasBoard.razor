@@ -16,54 +16,32 @@
 @implements IAsyncDisposable
 
 <div class="canvas-board-wrapper">
-    <div class="board-toolbar">
-        <div class="tool-group">
-            <button type="button" class="btn-tool" title="Zoom in" aria-label="Zoom in" @onclick="ZoomInAsync">+</button>
-            <button type="button" class="btn-tool" title="Zoom out" aria-label="Zoom out" @onclick="ZoomOutAsync">−</button>
-            <button class="btn-tool" title="Reset view" @onclick="ResetViewAsync">
-                @($"{_zoom * 100:0}%")
-            </button>
-            <button type="button" class="btn-tool" @onclick="FitCircuitAsync">Fit circuit</button>
+    <div class="board-toolbar command-bar border-bottom" role="toolbar" aria-label="Circuit tools">
+        <button type="button" class="btn panel-toggle" data-panel-toggle="library" aria-expanded="true" aria-controls="component-library" aria-label="Open components" title="Components"><i class="bi bi-grid" aria-hidden="true"></i><span class="desktop-only">Components</span></button>
+
+        <div class="tool-group tool-cluster">
+            <button type="button" class="btn @(_isPanMode ? "active" : "")" @onclick="TogglePanMode" aria-pressed="@_isPanMode" title="Pan board" aria-label="Pan board"><i class="bi bi-hand-index" aria-hidden="true"></i><span class="desktop-only">Pan</span></button>
+            <button type="button" class="btn" @onclick="DeleteSelectedAsync" disabled="@(_selectedGate == null && _selectedWire == null)" title="Delete selected" aria-label="Delete selected"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+            <button type="button" class="btn desktop-only" @onclick="ClearBoardAsync" title="Clear board" aria-label="Clear board"><i class="bi bi-file-earmark" aria-hidden="true"></i><span class="desktop-only">New</span></button>
         </div>
 
-        <div class="tool-group">
-            <button class="btn-tool @(_isPanMode ? "active-mode" : "")"
-                    @onclick="TogglePanMode">
-                Pan board
-            </button>
-
-            <button class="btn-tool btn-danger-outline"
-                    @onclick="DeleteSelectedAsync"
-                    disabled="@(_selectedGate == null && _selectedWire == null)">
-                Delete selected
-            </button>
-
-            <button class="btn-tool btn-danger-solid" @onclick="ClearBoardAsync">
-                Clear board
-            </button>
-        </div>
-
-        <div class="tool-group">
+        <div class="tool-group tool-cluster">
             @if (!_isEducationalMode)
             {
-                <button class="btn-tool btn-edu" @onclick="StartEducationalModeAsync">
-                    Step mode
-                </button>
+                <button type="button" class="btn btn-success" @onclick="StartEducationalModeAsync" title="Step mode" aria-label="Step mode"><i class="bi bi-play-fill" aria-hidden="true"></i><span class="desktop-only">Step mode</span></button>
             }
             else
             {
-                <button class="btn-tool btn-step" @onclick="ExecuteNextStepAsync">
-                    Next step (@(_stepSimulator?.StepCount ?? 0))
-                </button>
-
-                <button class="btn-tool" @onclick="ResetEducationalAsync">
-                    Reset steps
-                </button>
-
-                <button class="btn-tool btn-exit-edu" @onclick="ExitEducationalModeAsync">
-                    Run simulation
-                </button>
+                <button type="button" class="btn btn-success" @onclick="ExecuteNextStepAsync" title="Next step"><i class="bi bi-skip-forward-fill" aria-hidden="true"></i><span>Next (@(_stepSimulator?.StepCount ?? 0))</span></button>
+                <button type="button" class="btn" @onclick="ResetEducationalAsync" title="Reset steps" aria-label="Reset steps"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></button>
+                <button type="button" class="btn" @onclick="ExitEducationalModeAsync" title="Run simulation"><i class="bi bi-play-circle" aria-hidden="true"></i><span class="desktop-only">Run</span></button>
             }
+        </div>
+
+        <button type="button" class="btn truth-table-shortcut" data-truth-table aria-haspopup="dialog" aria-controls="truth-table-dialog" title="Open truth table"><i class="bi bi-table" aria-hidden="true"></i><span>Truth Table</span></button>
+        <div class="tool-group command-end">
+            <button type="button" class="btn desktop-only" @onclick="FitCircuitAsync" title="Fit circuit" aria-label="Fit circuit"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i><span class="desktop-only">Fit circuit</span></button>
+            <button type="button" class="btn panel-toggle" data-panel-toggle="analysis" aria-expanded="true" aria-controls="analysis-inspector" aria-label="Open analysis" title="Analysis & HDL"><i class="bi bi-sliders" aria-hidden="true"></i><span class="desktop-only">Analysis</span></button>
         </div>
     </div>
 
@@ -72,12 +50,12 @@
 
         @if (!string.IsNullOrWhiteSpace(_validationMessage))
         {
-            <span class="validation-alert">@_validationMessage</span>
+            <span class="badge bg-label-danger text-wrap">@_validationMessage</span>
         }
 
         @if (Manager?.HasFeedbackLoop == true)
         {
-            <span class="validation-alert">Feedback loop detected</span>
+            <span class="badge bg-label-danger text-wrap">Feedback loop detected</span>
         }
     </div>
 
@@ -100,14 +78,40 @@
                 @onmouseup="HandleMouseUpAsync"
                 @onmouseleave="HandleMouseLeaveAsync"
                 style="@($"width:100%;height:100%;display:block;cursor:{GetCursorStyle()};touch-action:none;user-select:none;")" />
+        <WirePresentation ViewportId="@_viewportId" Scene="@GetPresentationScene()" />
+        <div class="presentation-surface" style="@($"cursor:{GetCursorStyle()};")"
+             @onmousedown="HandlePresentationMouseDownAsync"
+             @onmousemove="HandleMouseMoveAsync"
+             @onmouseup="HandleMouseUpAsync"
+             @onmouseleave="HandleMouseLeaveAsync"
+             @ontouchstart="HandlePresentationTouchStartAsync" @ontouchstart:stopPropagation="true" @ontouchstart:preventDefault="true"
+             @ontouchmove="HandleTouchMoveAsync" @ontouchmove:stopPropagation="true" @ontouchmove:preventDefault="true"
+             @ontouchend="HandleTouchEndAsync" @ontouchend:stopPropagation="true" @ontouchend:preventDefault="true"
+             @ontouchcancel="HandleTouchCancelAsync" @ontouchcancel:stopPropagation="true"
+             @oncontextmenu:preventDefault="true"></div>
     </div>
+
+    <div class="canvas-scroll-horizontal">
+        <input type="range" min="@Coordinate(PanMinimumX)" max="@Coordinate(PanMaximumX)" step="1" value="@Coordinate(-_panX / _zoom)" @oninput="SlideHorizontalAsync" aria-label="Move canvas horizontally" />
+    </div>
+    <div class="canvas-scroll-vertical">
+        <input type="range" min="@Coordinate(PanMinimumY)" max="@Coordinate(PanMaximumY)" step="1" value="@Coordinate(-_panY / _zoom)" @oninput="SlideVerticalAsync" aria-label="Move canvas vertically" />
+    </div>
+
+    <div class="zoom btn-group shadow-sm" role="group" aria-label="Canvas zoom">
+        <button type="button" class="btn mobile-only" @onclick="FitCircuitAsync" title="Fit circuit" aria-label="Fit circuit"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i></button>
+            <button type="button" class="btn" title="Zoom out" aria-label="Zoom out" @onclick="ZoomOutAsync"><i class="bi bi-dash" aria-hidden="true"></i></button>
+            <button type="button" class="btn zoom-value" title="Reset view" aria-label="Reset view" @onclick="ResetViewAsync">@($"{_zoom * 100:0}%")</button>
+            <button type="button" class="btn" title="Zoom in" aria-label="Zoom in" @onclick="ZoomInAsync"><i class="bi bi-plus" aria-hidden="true"></i></button>
+    </div>
+    <div class="signal-key" aria-label="Green signal is one, gray signal is zero"><span></span> 1 <span></span> 0</div>
 
     @if (_isEducationalMode && _stepSimulator != null)
     {
         <div class="educational-panel">
             <div class="edu-header">
                 <strong>@_stepSimulator.LastActionDescription</strong>
-                <span class="badge-stable">Step @_stepSimulator.StepCount</span>
+                <span class="badge bg-label-success">Step @_stepSimulator.StepCount</span>
             </div>
 
             <div>Simulation stage: @_stepSimulator.CurrentStage</div>
