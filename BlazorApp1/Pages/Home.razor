@@ -62,8 +62,10 @@
                 <section class="circuit-status" aria-label="Circuit status">
                     <h2 class="panel-title">Circuit status</h2>
                     <dl>
-                        <dt>Components</dt><dd>@sharedManager.Gates.Count</dd>
-                        <dt>Connections</dt><dd>@sharedManager.Wires.Count</dd>
+                        <dt>Components</dt>
+                        <dd>@sharedManager.Gates.Count</dd>
+                        <dt>Connections</dt>
+                        <dd>@sharedManager.Wires.Count</dd>
                     </dl>
                     <p>Click a switch to toggle 0 / 1. Green wires carry a high signal.</p>
                 </section>
@@ -85,16 +87,16 @@
 </div>
 
 @code {
-
     private readonly CircuitManager sharedManager = new();
     private CanvasBoard? canvasBoard;
     private AnalysisPanel? analysisPanel;
+
     [SupplyParameterFromQuery(Name = "shared")]
     public int? SharedCircuitId { get; set; }
+
     private bool showCommunity;
     private bool redrawWorkspace;
     private bool communityOpened;
-    private string mobilePanel = "board";
     private int? previousSharedId;
 
     protected override void OnParametersSet()
@@ -118,13 +120,11 @@
 
     private void ShowWorkspace() { showCommunity = false; redrawWorkspace = true; }
     private void ShowCommunity() { showCommunity = true; communityOpened = true; }
-    private void SelectMobilePanel(string panel) { mobilePanel = panel; redrawWorkspace = panel == "board"; }
 
     private Task ImportSharedCircuit(CircuitManager imported)
     {
         sharedManager.ReplaceWith(imported);
         showCommunity = false;
-        mobilePanel = "board";
         redrawWorkspace = true;
         RefreshAnalysis();
         return Task.CompletedTask;

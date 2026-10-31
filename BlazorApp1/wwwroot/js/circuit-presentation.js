@@ -1,5 +1,4 @@
 (() => {
-    const contexts = new Map();
     const dialogPanels = new Map();
     let resizing = null;
     let dialogRequest = 0;
@@ -105,6 +104,7 @@
         document.body.classList.add("resizing-panel");
         event.preventDefault();
     });
+
     document.addEventListener("close", event => {
         const dialog = event.target;
         if (!(dialog instanceof HTMLDialogElement) || !dialog.classList.contains("analysis-dialog")) return;
@@ -127,22 +127,27 @@
         if (trigger?.isConnected && trigger.getClientRects().length && !trigger.closest("[inert]")) trigger.focus();
         else document.querySelector('[data-panel-toggle="analysis"]')?.focus();
     }, true);
+
     document.addEventListener("change", event => {
         if (event.target.id === "upload" && /\.(sv|v)$/i.test(event.target.files?.[0]?.name || ""))
             openAnalysisDialog("import-hdl-dialog", document.querySelector('[data-panel-toggle="library"]'));
     });
+
     document.addEventListener("pointermove", event => {
         if (!resizing) return;
         const delta = (event.clientX - resizing.x) * (resizing.name === "library" ? 1 : -1);
         resizePanel(resizing.name, resizing.width + delta);
     });
+
     const stopResize = () => {
         if (resizing?.handle.hasPointerCapture(resizing.pointer)) resizing.handle.releasePointerCapture(resizing.pointer);
         resizing = null;
         document.body.classList.remove("resizing-panel");
     };
+
     document.addEventListener("pointerup", stopResize);
     document.addEventListener("pointercancel", stopResize);
+
     document.addEventListener("keydown", event => {
         const handle = event.target.closest("[data-resize-panel]");
         if (!handle || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -151,6 +156,7 @@
         resizePanel(name, width + (event.key === "ArrowRight" ? 20 : -20) * (name === "library" ? 1 : -1));
         event.preventDefault();
     });
+
     matchMedia("(min-width: 992px)").addEventListener("change", () => {
         document.querySelectorAll(".library,.inspector").forEach(panel => {
             panel.inert = false;
@@ -163,37 +169,6 @@
 
     window.circuitPresentation = {
         showTruthTable,
-        openAnalysisDialog,
-        installWires(id) {
-            if (contexts.has(id)) return true;
-            const canvas = document.getElementById(id)?.querySelector("canvas");
-            const context = canvas?.getContext("2d");
-            if (!context) return false;
-            const names = ["beginPath", "moveTo", "lineTo", "stroke", "arc", "arcTo", "bezierCurveTo", "quadraticCurveTo", "rect", "closePath"];
-            const originals = Object.fromEntries(names.map(name => [name, context[name]]));
-            const state = { context, originals, points: [], complex: false, skipped: 0 };
-            context.beginPath = function (...args) { state.points = []; state.complex = false; return originals.beginPath.apply(this, args); };
-            for (const name of ["moveTo", "lineTo"]) context[name] = function (...args) { state.points.push(args.slice(0, 2)); return originals[name].apply(this, args); };
-            for (const name of names.slice(4)) context[name] = function (...args) { state.complex = true; return originals[name].apply(this, args); };
-            context.stroke = function (...args) {
-                const p = state.points;
-                const color = String(this.strokeStyle).toLowerCase();
-                const wire = !state.complex && p.length === 4 && p[0][1] === p[1][1] && p[1][0] === p[2][0] && p[2][1] === p[3][1];
-                if (wire && ["#64748b", "#10b981", "#f59e0b"].includes(color) && [2.2, 3, 4].some(width => Math.abs(this.lineWidth - width) < .001) && this.getLineDash().length === 0) {
-                    state.skipped++;
-                    return;
-                }
-                return originals.stroke.apply(this, args);
-            };
-            contexts.set(id, state);
-            return true;
-        },
-        removeWires(id) {
-            const state = contexts.get(id);
-            if (!state) return;
-            Object.entries(state.originals).forEach(([name, original]) => state.context[name] = original);
-            contexts.delete(id);
-        },
-        wireStats(id) { return { installed: contexts.has(id), suppressed: contexts.get(id)?.skipped || 0 }; }
+        openAnalysisDialog
     };
 })();

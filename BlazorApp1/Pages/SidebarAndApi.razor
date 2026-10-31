@@ -11,150 +11,150 @@
 @inject CircuitApiClient CircuitApi
 
 <details open class="tool-section">
-<summary class="section-toggle">Input / Output</summary>
-<div class="component-grid">
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddSwitchAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M2 28 H20 L43 13 M49 28 H78" />
-            <circle cx="20" cy="28" r="3" />
-            <circle cx="49" cy="28" r="3" />
-        </svg>
-        <span>SWITCH</span>
-    </button>
+    <summary class="section-toggle">Input / Output</summary>
+    <div class="component-grid">
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddSwitchAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M2 28 H20 L43 13 M49 28 H78" />
+                <circle cx="20" cy="28" r="3" />
+                <circle cx="49" cy="28" r="3" />
+            </svg>
+            <span>SWITCH</span>
+        </button>
 
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddLampAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M2 24 H19 M53 24 H78" />
-            <circle cx="36" cy="24" r="16" />
-            <path d="M25 13 L47 35 M47 13 L25 35" />
-        </svg>
-        <span>LAMP</span>
-    </button>
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddLampAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M2 24 H19 M53 24 H78" />
+                <circle cx="36" cy="24" r="16" />
+                <path d="M25 13 L47 35 M47 13 L25 35" />
+            </svg>
+            <span>LAMP</span>
+        </button>
 
-</div>
+    </div>
 </details>
 <details open class="tool-section">
-<summary class="section-toggle">Logic gates</summary>
-<div class="component-grid">
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddAndAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M0 16 H12 M0 32 H12 M50 24 H78" />
-            <path d="M12 8 H34 A16 16 0 0 1 34 40 H12 Z" />
-        </svg>
-        <span>AND</span>
-    </button>
+    <summary class="section-toggle">Logic gates</summary>
+    <div class="component-grid">
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddAndAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M0 16 H12 M0 32 H12 M50 24 H78" />
+                <path d="M12 8 H34 A16 16 0 0 1 34 40 H12 Z" />
+            </svg>
+            <span>AND</span>
+        </button>
 
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddNandAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M0 16 H12 M0 32 H12 M59 24 H78" />
-            <path d="M12 8 H34 A16 16 0 0 1 34 40 H12 Z" />
-            <circle cx="54" cy="24" r="4" />
-        </svg>
-        <span>NAND</span>
-    </button>
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddNandAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M0 16 H12 M0 32 H12 M59 24 H78" />
+                <path d="M12 8 H34 A16 16 0 0 1 34 40 H12 Z" />
+                <circle cx="54" cy="24" r="4" />
+            </svg>
+            <span>NAND</span>
+        </button>
 
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddOrAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M0 16 H17 M0 32 H17 M54 24 H78" />
-            <path d="M12 8 Q25 24 12 40 Q34 40 54 24 Q34 8 12 8 Z" />
-        </svg>
-        <span>OR</span>
-    </button>
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddOrAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M0 16 H17 M0 32 H17 M54 24 H78" />
+                <path d="M12 8 Q25 24 12 40 Q34 40 54 24 Q34 8 12 8 Z" />
+            </svg>
+            <span>OR</span>
+        </button>
 
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddNorAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M0 16 H17 M0 32 H17 M63 24 H78" />
-            <path d="M12 8 Q25 24 12 40 Q34 40 54 24 Q34 8 12 8 Z" />
-            <circle cx="58" cy="24" r="4" />
-        </svg>
-        <span>NOR</span>
-    </button>
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddNorAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M0 16 H17 M0 32 H17 M63 24 H78" />
+                <path d="M12 8 Q25 24 12 40 Q34 40 54 24 Q34 8 12 8 Z" />
+                <circle cx="58" cy="24" r="4" />
+            </svg>
+            <span>NOR</span>
+        </button>
 
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddNotAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M0 24 H10 M58 24 H78" />
-            <path d="M10 8 L48 24 L10 40 Z" />
-            <circle cx="54" cy="24" r="4" />
-        </svg>
-        <span>NOT</span>
-    </button>
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddNotAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M0 24 H10 M58 24 H78" />
+                <path d="M10 8 L48 24 L10 40 Z" />
+                <circle cx="54" cy="24" r="4" />
+            </svg>
+            <span>NOT</span>
+        </button>
 
-    <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddXorAsync">
-        <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
-            <path d="M0 16 H17 M0 32 H17 M54 24 H78" />
-            <path d="M6 8 Q19 24 6 40" />
-            <path d="M12 8 Q25 24 12 40 Q34 40 54 24 Q34 8 12 8 Z" />
-        </svg>
-        <span>XOR</span>
-    </button>
-</div>
+        <button type="button" disabled="@isBusy" class="component gate-tool" @onclick="AddXorAsync">
+            <svg class="gate-symbol" viewBox="0 0 80 48" aria-hidden="true">
+                <path d="M0 16 H17 M0 32 H17 M54 24 H78" />
+                <path d="M6 8 Q19 24 6 40" />
+                <path d="M12 8 Q25 24 12 40 Q34 40 54 24 Q34 8 12 8 Z" />
+            </svg>
+            <span>XOR</span>
+        </button>
+    </div>
 </details>
 <details open class="tool-section files-section">
-<summary class="section-toggle">Files &amp; saved circuits</summary>
-<div class="files-body">
-<div class="file-wrapper">
-    <InputFile id="upload"
-               OnChange="LoadCircuitAsync"
-               accept=".json,.sv,.v,application/json,text/plain"
-               disabled="@isBusy"
-               class="file-input" />
+    <summary class="section-toggle">Files &amp; saved circuits</summary>
+    <div class="files-body">
+        <div class="file-wrapper">
+            <InputFile id="upload"
+                       OnChange="LoadCircuitAsync"
+                       accept=".json,.sv,.v,application/json,text/plain"
+                       disabled="@isBusy"
+                       class="file-input" />
 
-    <label for="upload" class="btn btn-outline-primary w-100"><i class="bi bi-upload" aria-hidden="true"></i> Import file</label>
-    <span class="file-name">@SelectedFileName</span>
-</div>
+            <label for="upload" class="btn btn-outline-primary w-100"><i class="bi bi-upload" aria-hidden="true"></i> Import file</label>
+            <span class="file-name">@SelectedFileName</span>
+        </div>
 
-<p class="text-danger">@LoadError</p>
+        <p class="text-danger">@LoadError</p>
 
-<label for="saved-circuit-name" class="form-label">Circuit name</label>
-<input id="saved-circuit-name" class="form-control api-control" @bind="CircuitName" maxlength="100" disabled="@isBusy" placeholder="Circuit name" />
+        <label for="saved-circuit-name" class="form-label">Circuit name</label>
+        <input id="saved-circuit-name" class="form-control api-control" @bind="CircuitName" maxlength="100" disabled="@isBusy" placeholder="Circuit name" />
 
-<button type="button" disabled="@isBusy" class="btn btn-primary api-control" @onclick="SaveToApiAsync">
-    <i class="bi bi-floppy" aria-hidden="true"></i> Save
-</button>
+        <button type="button" disabled="@isBusy" class="btn btn-primary api-control" @onclick="SaveToApiAsync">
+            <i class="bi bi-floppy" aria-hidden="true"></i> Save
+        </button>
 
-<button type="button" disabled="@isBusy" class="btn btn-outline-secondary api-control" @onclick="UpdateSavedCircuitAsync">
-    Update selected circuit
-</button>
+        <button type="button" disabled="@isBusy" class="btn btn-outline-secondary api-control" @onclick="UpdateSavedCircuitAsync">
+            Update selected circuit
+        </button>
 
-<button type="button" disabled="@isBusy" class="btn btn-outline-secondary api-control" @onclick="LoadSavedCircuitsAsync">
-    Refresh saved circuits
-</button>
+        <button type="button" disabled="@isBusy" class="btn btn-outline-secondary api-control" @onclick="LoadSavedCircuitsAsync">
+            Refresh saved circuits
+        </button>
 
-<label for="saved-circuit-list" class="form-label mt-3">Saved circuits</label>
-<select id="saved-circuit-list" class="form-select api-control" @bind="ApiLoadId" disabled="@isBusy">
-    <option value="0">Select a circuit</option>
-    @foreach (var circuit in SavedCircuits)
-    {
-        <option value="@circuit.CircuitId">
-            @circuit.Name (ID: @circuit.CircuitId)
-        </option>
-    }
-</select>
+        <label for="saved-circuit-list" class="form-label mt-3">Saved circuits</label>
+        <select id="saved-circuit-list" class="form-select api-control" @bind="ApiLoadId" disabled="@isBusy">
+            <option value="0">Select a circuit</option>
+            @foreach (var circuit in SavedCircuits)
+            {
+                <option value="@circuit.CircuitId">
+                    @circuit.Name (ID: @circuit.CircuitId)
+                </option>
+            }
+        </select>
 
-<button type="button" disabled="@isBusy" class="btn btn-outline-primary api-control" @onclick="LoadFromApiAsync">
-    Load selected circuit
-</button>
-<button type="button" disabled="@isBusy" class="btn btn-outline-danger api-control" @onclick="DeleteSavedCircuitAsync">
-    Delete selected circuit
-</button>
-@if (isBusy)
-{
-    <p role="status">Working...</p>
-}
-<p>@ApiListMessage</p>
-<p>@ApiLoadMessage</p>
-<p class="text-info">@ApiMessage</p>
+        <button type="button" disabled="@isBusy" class="btn btn-outline-primary api-control" @onclick="LoadFromApiAsync">
+            Load selected circuit
+        </button>
+        <button type="button" disabled="@isBusy" class="btn btn-outline-danger api-control" @onclick="DeleteSavedCircuitAsync">
+            Delete selected circuit
+        </button>
+        @if (isBusy)
+        {
+            <p role="status">Working...</p>
+        }
+        <p>@ApiListMessage</p>
+        <p>@ApiLoadMessage</p>
+        <p class="text-info">@ApiMessage</p>
 
-<button type="button" disabled="@isBusy" class="btn btn-outline-primary w-100 mb-2" @onclick="SaveCircuitAsync">
-    <i class="bi bi-download" aria-hidden="true"></i> Download Circuit
-</button>
-<button type="button" disabled="@isBusy"
-        class="btn btn-outline-danger api-control"
-        @onclick="ClearBoardAsync">
-    <i class="bi bi-trash3" aria-hidden="true"></i> Clear Board
-</button>
-<p class="form-text">Saved circuits are linked to this browser.</p>
-</div>
+        <button type="button" disabled="@isBusy" class="btn btn-outline-primary w-100 mb-2" @onclick="SaveCircuitAsync">
+            <i class="bi bi-download" aria-hidden="true"></i> Download Circuit
+        </button>
+        <button type="button" disabled="@isBusy"
+                class="btn btn-outline-danger api-control"
+                @onclick="ClearBoardAsync">
+            <i class="bi bi-trash3" aria-hidden="true"></i> Clear Board
+        </button>
+        <p class="form-text">Saved circuits are linked to this browser.</p>
+    </div>
 </details>
 
 @code {
@@ -175,10 +175,40 @@
     private string? ApiLoadMessage;
     private bool isBusy;
 
+    /// <summary>
+    /// Collision-Free Grid Search: Finds the first unoccupied grid cell so newly added gates
+    /// never overlap existing gates even after deletions or manual rearrangements.
+    /// </summary>
     private (double X, double Y) GetNextPosition()
     {
-        int index = Manager.Gates.Count;
-        return (180 + (index % 4) * 160, 120 + (index / 4) * 110);
+        const double startX = 180;
+        const double startY = 120;
+        const double stepX = 160;
+        const double stepY = 110;
+        const int columns = 4;
+
+        for (int slot = 0; slot < Manager.Gates.Count + 16; slot++)
+        {
+            double candidateX = startX + (slot % columns) * stepX;
+            double candidateY = startY + (slot / columns) * stepY;
+
+            bool occupied = false;
+            for (int i = 0; i < Manager.Gates.Count; i++)
+            {
+                var g = Manager.Gates[i];
+                if (g != null && Math.Abs(g.X - candidateX) < 120 && Math.Abs(g.Y - candidateY) < 80)
+                {
+                    occupied = true;
+                    break;
+                }
+            }
+
+            if (!occupied)
+                return (candidateX, candidateY);
+        }
+
+        int fallback = Manager.Gates.Count;
+        return (startX + (fallback % columns) * stepX, startY + (fallback / columns) * stepY);
     }
 
     private async Task AddGateAsync(IGate gate)
@@ -245,20 +275,20 @@
         {
             await using var stream = e.File.OpenReadStream(1_000_000);
             using var reader = new StreamReader(stream);
-            var json = await reader.ReadToEndAsync();
+            var content = await reader.ReadToEndAsync();
             string extension = Path.GetExtension(e.File.Name);
             if (extension.Equals(".sv", StringComparison.OrdinalIgnoreCase) ||
                 extension.Equals(".v", StringComparison.OrdinalIgnoreCase))
             {
                 if (!OnHdlFileSelected.HasDelegate)
                     throw new InvalidOperationException("HDL file import is not connected.");
-                await OnHdlFileSelected.InvokeAsync(new HdlSourceFile { FileName = e.File.Name, Source = json });
+                await OnHdlFileSelected.InvokeAsync(new HdlSourceFile { FileName = e.File.Name, Source = content });
                 SelectedFileName = e.File.Name;
                 return;
             }
             if (!extension.Equals(".json", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Select a .json, .sv or .v file.");
-            var loadedManager = CircuitSerializer.FromJsonToManager(json);
+            var loadedManager = CircuitSerializer.FromJsonToManager(content);
             await ApplyLoadedCircuitAsync(loadedManager);
             SelectedFileName = e.File.Name;
         }

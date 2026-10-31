@@ -3,8 +3,10 @@
 @using BlazorApp1.Services
 @using System.Net.Http
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web.Virtualization
 
 @inject HdlImportClient ImportClient
+@inject IJSRuntime JS
 
 <section class="analysis-tools" aria-label="Analysis tools">
     <p class="analysis-intro">Choose a tool to open it in a larger workspace.</p>
@@ -66,12 +68,13 @@
                 </div>
 
                 <div class="table-responsive border rounded truth-result-wrap"
+                     style="max-height: 420px; overflow-y: auto;"
                      tabindex="0"
                      role="region"
                      aria-label="Truth table results">
                     <table class="table table-sm table-striped table-hover align-middle text-center mb-0">
                         <caption class="visually-hidden">Circuit input and output values</caption>
-                        <thead class="table-light">
+                        <thead class="table-light sticky-top">
                             <tr>
                                 @foreach (var item in generator.InputIds)
                                 {
@@ -91,19 +94,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in rows)
-                            {
+                            <Virtualize Items="@rows" Context="row" ItemSize="36" OverscanCount="10">
                                 <tr>
                                     @foreach (var item in row.InputValues)
                                     {
-                                        <td class="font-monospace py-2">@Convert.ToInt32(item)</td>
+                                        <td class="font-monospace py-2">@(item ? 1 : 0)</td>
                                     }
                                     @foreach (var item in row.OutputValues)
                                     {
-                                        <td class="font-monospace py-2">@Convert.ToInt32(item)</td>
+                                        <td class="font-monospace py-2">@(item ? 1 : 0)</td>
                                     }
                                 </tr>
-                            }
+                            </Virtualize>
                         </tbody>
                     </table>
                 </div>
@@ -178,11 +180,11 @@
                         <span class="small font-monospace text-break">
                             @GetDownloadFileName()
                         </span>
-                        <a href="@GetVerilogDownloadUrl()"
-                               download="@GetDownloadFileName()"
-                               class="btn btn-primary btn-sm">
+                        <button type="button"
+                                class="btn btn-primary btn-sm"
+                                @onclick="DownloadVerilogAsync">
                             Download
-                        </a>
+                        </button>
                     </div>
 
                     <pre class="bg-dark text-light small p-3 mb-0"
@@ -307,7 +309,7 @@
     [Parameter]
     public EventCallback OnCircuitChanged { get; set; }
 
-    private YosysNetlistAdapter adapter = new YosysNetlistAdapter();
+    private readonly YosysNetlistAdapter adapter = new();
     private string hdlText = string.Empty;
     private string hdlFileName = string.Empty;
     private string importTopModule = "demo";
@@ -325,41 +327,34 @@
         }
     }
 
-    private bool isImporting = false;
+    private bool isImporting;
     private string importErrorMessage = string.Empty;
     private string importDiagnostics = string.Empty;
 
-    private VerilogTranslator translator = new VerilogTranslator();
-    private List<TruthTableRow> rows = new List<TruthTableRow>();
-    private TruthTableGenerator generator = new TruthTableGenerator();
+    private readonly VerilogTranslator translator = new();
+    private List<TruthTableRow> rows = new();
+    private readonly TruthTableGenerator generator = new();
     private bool resultsDirty = true;
     private string errorMessage = string.Empty;
     private string moduleName = "demo";
     private bool useSystemVerilog = true;
     private string verilogText = string.Empty;
     private string verilogErrorMessage = string.Empty;
+
     private string GetImportErrorSummary()
     {
         string firstLine = importErrorMessage.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? importErrorMessage;
         return firstLine.Length > 300 ? firstLine[..300] + "..." : firstLine;
     }
 
-    private string GetDownloadFileName()
-    {
-        if (useSystemVerilog)
-        {
-            return moduleName + ".sv";
-        }
-        else
-        {
-            return moduleName + ".v";
-        }
-    }
+    private string GetDownloadFileName() => useSystemVerilog ? $"{moduleName}.sv" : $"{moduleName}.v";
 
-    private string GetVerilogDownloadUrl()
+    private async Task DownloadVerilogAsync()
     {
-        string encodedText = Uri.EscapeDataString(verilogText);
-        return "data:text/plain;charset=utf-8," + encodedText;
+        if (!string.IsNullOrEmpty(verilogText))
+        {
+            await JS.InvokeVoidAsync("downloadTextFile", GetDownloadFileName(), verilogText);
+        }
     }
 
     public void GenerateAnalysis()
@@ -440,10 +435,7 @@
 
     private async Task ImportFromVerilog()
     {
-        if (isImporting)
-        {
-            return;
-        }
+        if (isImporting) return;
 
         importErrorMessage = string.Empty;
         importDiagnostics = string.Empty;
@@ -466,18 +458,16 @@
 
         try
         {
-            HdlSynthesisRequest request = new HdlSynthesisRequest
+            var request = new HdlSynthesisRequest
             {
                 Source = hdlText,
                 TopModule = importTopModule
             };
 
-            HdlSynthesisResponse result = await ImportClient.SynthesizeAsync(request);
-
+            var result = await ImportClient.SynthesizeAsync(request);
             importDiagnostics = result.Diagnostics;
 
-            CircuitManager temporaryManager = adapter.ImportFromJson(result.NetlistJson, request.TopModule);
-
+            var temporaryManager = adapter.ImportFromJson(result.NetlistJson, request.TopModule);
             Manager.ReplaceWith(temporaryManager);
 
             rows.Clear();
@@ -500,4 +490,3 @@
         }
     }
 }
-

@@ -3,8 +3,6 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
-@using Excubo.Blazor.Canvas
-@using Excubo.Blazor.Canvas.Contexts
 @using LogicCore.Management
 @using LogicCore.Interfaces
 @using LogicCore.Connections
@@ -15,12 +13,12 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
-<div class="canvas-board-wrapper">
+<div class="canvas-board-wrapper" style="position:relative; display:flex; flex-direction:column; width:100%; height:100%; min-height:0;">
     <div class="board-toolbar command-bar border-bottom" role="toolbar" aria-label="Circuit tools">
         <button type="button" class="btn panel-toggle" data-panel-toggle="library" aria-expanded="true" aria-controls="component-library" aria-label="Open components" title="Components"><i class="bi bi-grid" aria-hidden="true"></i><span class="desktop-only">Components</span></button>
 
         <div class="tool-group tool-cluster">
-            <button type="button" class="btn @(_isPanMode ? "active" : "")" @onclick="TogglePanMode" aria-pressed="@_isPanMode" title="Pan board" aria-label="Pan board"><i class="bi bi-hand-index" aria-hidden="true"></i><span class="desktop-only">Pan</span></button>
+            <button type="button" class="btn @(_isPanMode ? "active" : "")" @onclick="TogglePanModeAsync" aria-pressed="@_isPanMode" title="Pan board" aria-label="Pan board"><i class="bi bi-hand-index" aria-hidden="true"></i><span class="desktop-only">Pan</span></button>
             <button type="button" class="btn" @onclick="DeleteSelectedAsync" disabled="@(_selectedGate == null && _selectedWire == null)" title="Delete selected" aria-label="Delete selected"><i class="bi bi-trash3" aria-hidden="true"></i></button>
             <button type="button" class="btn desktop-only" @onclick="ClearBoardAsync" title="Clear board" aria-label="Clear board"><i class="bi bi-file-earmark" aria-hidden="true"></i><span class="desktop-only">New</span></button>
         </div>
@@ -48,6 +46,11 @@
     <div class="status-banner @GetStatusCssClass()">
         <span>@_statusMessage</span>
 
+        @if (!string.IsNullOrWhiteSpace(_engineInitError))
+        {
+            <span class="badge bg-label-danger text-wrap">@_engineInitError</span>
+        }
+
         @if (!string.IsNullOrWhiteSpace(_validationMessage))
         {
             <span class="badge bg-label-danger text-wrap">@_validationMessage</span>
@@ -59,36 +62,9 @@
         }
     </div>
 
-    <div class="canvas-viewport"
-         id="@_viewportId"
-         @onmouseenter="MeasureViewportAsync"
-         @onwheel="HandleWheelAsync"
-         @onwheel:preventDefault="true"
-         @ontouchstart="HandleTouchStartAsync" @ontouchstart:preventDefault="true"
-         @ontouchmove="HandleTouchMoveAsync" @ontouchmove:preventDefault="true"
-         @ontouchend="HandleTouchEndAsync" @ontouchend:preventDefault="true"
-         @ontouchcancel="HandleTouchCancelAsync"
-         @oncontextmenu:preventDefault="true">
-
-        <Canvas @ref="_canvasRef"
-                width="@_canvasWidth"
-                height="@_canvasHeight"
-                @onmousedown="HandleMouseDownAsync"
-                @onmousemove="HandleMouseMoveAsync"
-                @onmouseup="HandleMouseUpAsync"
-                @onmouseleave="HandleMouseLeaveAsync"
-                style="@($"width:100%;height:100%;display:block;cursor:{GetCursorStyle()};touch-action:none;user-select:none;")" />
-        <WirePresentation ViewportId="@_viewportId" Scene="@GetPresentationScene()" />
-        <div class="presentation-surface" style="@($"cursor:{GetCursorStyle()};")"
-             @onmousedown="HandlePresentationMouseDownAsync"
-             @onmousemove="HandleMouseMoveAsync"
-             @onmouseup="HandleMouseUpAsync"
-             @onmouseleave="HandleMouseLeaveAsync"
-             @ontouchstart="HandlePresentationTouchStartAsync" @ontouchstart:stopPropagation="true" @ontouchstart:preventDefault="true"
-             @ontouchmove="HandleTouchMoveAsync" @ontouchmove:stopPropagation="true" @ontouchmove:preventDefault="true"
-             @ontouchend="HandleTouchEndAsync" @ontouchend:stopPropagation="true" @ontouchend:preventDefault="true"
-             @ontouchcancel="HandleTouchCancelAsync" @ontouchcancel:stopPropagation="true"
-             @oncontextmenu:preventDefault="true"></div>
+    <div class="canvas-viewport" id="@_viewportId" style="position:relative; flex:1 1 auto; width:100%; height:100%; min-height:360px; overflow:hidden;">
+        <canvas id="@($"{_viewportId}-grid")" class="canvas-layer canvas-grid-layer" aria-hidden="true" style="position:absolute; inset:0; width:100%; height:100%; display:block; z-index:1; pointer-events:none;"></canvas>
+        <canvas id="@($"{_viewportId}-scene")" class="canvas-layer canvas-scene-layer" aria-label="Interactive logic circuit canvas" style="position:absolute; inset:0; width:100%; height:100%; display:block; z-index:2;"></canvas>
     </div>
 
     <div class="canvas-scroll-horizontal">
@@ -100,9 +76,9 @@
 
     <div class="zoom btn-group shadow-sm" role="group" aria-label="Canvas zoom">
         <button type="button" class="btn mobile-only" @onclick="FitCircuitAsync" title="Fit circuit" aria-label="Fit circuit"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i></button>
-            <button type="button" class="btn" title="Zoom out" aria-label="Zoom out" @onclick="ZoomOutAsync"><i class="bi bi-dash" aria-hidden="true"></i></button>
-            <button type="button" class="btn zoom-value" title="Reset view" aria-label="Reset view" @onclick="ResetViewAsync">@($"{_zoom * 100:0}%")</button>
-            <button type="button" class="btn" title="Zoom in" aria-label="Zoom in" @onclick="ZoomInAsync"><i class="bi bi-plus" aria-hidden="true"></i></button>
+        <button type="button" class="btn" title="Zoom out" aria-label="Zoom out" @onclick="ZoomOutAsync"><i class="bi bi-dash" aria-hidden="true"></i></button>
+        <button type="button" class="btn zoom-value" title="Reset view" aria-label="Reset view" @onclick="ResetViewAsync">@($"{_zoom * 100:0}%")</button>
+        <button type="button" class="btn" title="Zoom in" aria-label="Zoom in" @onclick="ZoomInAsync"><i class="bi bi-plus" aria-hidden="true"></i></button>
     </div>
     <div class="signal-key" aria-label="Green signal is one, gray signal is zero"><span></span> 1 <span></span> 0</div>
 
@@ -126,8 +102,11 @@
     [Parameter]
     public EventCallback OnBoardUpdated { get; set; }
 
-    private Canvas? _canvasRef;
     private readonly string _viewportId = "cv-" + Guid.NewGuid().ToString("N");
+    private IJSObjectReference? _engineModule;
+    private DotNetObjectReference<CanvasBoard>? _dotNetRef;
+    private bool _engineInitialized;
+    private string? _engineInitError;
 
     private int _canvasWidth = 1200;
     private int _canvasHeight = 700;
@@ -138,59 +117,25 @@
     private const double GridSize = 20;
     private const double GateWidth = 110;
     private const double GateHeight = 68;
-    private const double BodyLeft = 30;
-    private const double BodyRight = 80;
-    private const double BodyHeight = 40;
-    private const double BubbleRadius = 4;
-    private const double PinDotRadius = 4;
-    private const double OrCurve = 12;
-
-    private const double PinPickRadiusPx = 10;
-    private const double SnapRadiusPx = 18;
 
     private double _zoom = 1;
     private double _panX;
     private double _panY;
-
     private bool _isPanMode;
-    private bool _isPanning;
-    private double _panStartMouseX;
-    private double _panStartMouseY;
 
     private IGate? _selectedGate;
     private Wire? _selectedWire;
-
-    private IGate? _draggingGate;
-    private bool _hasMovedGate;
-    private double _dragOffsetX;
-    private double _dragOffsetY;
-
-    private IGate? _wiringSourceGate;
-    private bool _isDrawingTempWire;
-    private double _tempWireEndX;
-    private double _tempWireEndY;
-
-    private IGate? _hoverInputGate;
-    private int _hoverInputIndex = -1;
-    private bool _hoverInputValid;
 
     private bool _isEducationalMode;
     private StepSimulator? _stepSimulator;
 
     private string? _validationMessage;
-
     private string _statusMessage =
         "Drag an output pin to an input pin to connect gates. Click a switch to toggle its state.";
-
     private bool _isErrorStatus;
 
-    private bool _isRendering;
-    private bool _renderPending;
-    private bool _isTouchInput;
-    private bool _touchActive;
-    private DotNetObjectReference<CanvasBoard>? _resizeReference;
-
-    private HashSet<(IGate, int)> _occupiedInputs = new();
+    private bool _isSyncing;
+    private bool _syncPending;
 
     protected override void OnParametersSet()
     {
@@ -203,20 +148,49 @@
         }
     }
 
+    private async Task<bool> EnsureEngineInitializedAsync()
+    {
+        if (_engineInitialized && _engineModule != null)
+            return true;
+
+        try
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            _engineModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/canvasEngine.js");
+            var size = await _engineModule.InvokeAsync<double[]>("initCanvas", _viewportId, _dotNetRef);
+            if (size is { Length: >= 2 } && size[0] > 50 && size[1] > 50)
+            {
+                _canvasWidth = (int)Math.Round(size[0]);
+                _canvasHeight = (int)Math.Round(size[1]);
+            }
+            _engineInitialized = true;
+            _engineInitError = null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _engineInitError = $"Canvas engine error: {ex.Message}";
+            _isErrorStatus = true;
+            return false;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender || !_engineInitialized)
         {
-            await MeasureViewportAsync();
-            _resizeReference = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("circuitUi.observeViewport", _viewportId, _resizeReference);
+            if (!await EnsureEngineInitializedAsync())
+            {
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
         }
 
         if (_refreshCircuitAfterRender && Manager != null)
         {
             _refreshCircuitAfterRender = false;
             _redrawAfterRender = false;
-            await SimulateAndRefreshAsync();
+            await SimulateAndRefreshAsync(geometryChanged: true);
         }
         else if ((firstRender || _redrawAfterRender) && Manager != null)
         {
@@ -225,72 +199,108 @@
         }
     }
 
-    [JSInvokable]
-    public async Task ResizeViewportAsync()
-    {
-        await MeasureViewportAsync();
-        if (_canvasWidth < 768 && Manager.Gates.Count > 0)
-            FitCircuit();
-        await InvokeAsync(StateHasChanged);
-    }
-
     public async ValueTask DisposeAsync()
     {
-        try { await JS.InvokeVoidAsync("circuitUi.unobserveViewport", _viewportId); }
-        catch (JSException) { }
-        _resizeReference?.Dispose();
+        _engineInitialized = false;
+        if (_engineModule != null)
+        {
+            try
+            {
+                await _engineModule.InvokeVoidAsync("disposeCanvas", _viewportId);
+                await _engineModule.DisposeAsync();
+            }
+            catch (JSException) { }
+            catch (ObjectDisposedException) { }
+        }
+        _dotNetRef?.Dispose();
     }
 
     private async Task MeasureViewportAsync()
     {
+        if (!await EnsureEngineInitializedAsync() || _engineModule == null)
+            return;
+
         try
         {
-            var size = await JS.InvokeAsync<double[]>("circuitUi.measure", _viewportId);
-
-            if (size == null || size.Length < 2)
-                return;
-
-            int w = (int)Math.Round(size[0]);
-            int h = (int)Math.Round(size[1]);
-
-            if (w > 50 && h > 50 && (w != _canvasWidth || h != _canvasHeight))
+            var size = await _engineModule.InvokeAsync<double[]>("measureViewport", _viewportId);
+            if (size is { Length: >= 2 })
             {
-                _canvasWidth = w;
-                _canvasHeight = h;
-                _redrawAfterRender = true;
-                await InvokeAsync(StateHasChanged);
+                int w = (int)Math.Round(size[0]);
+                int h = (int)Math.Round(size[1]);
+                if (w > 50 && h > 50)
+                {
+                    _canvasWidth = w;
+                    _canvasHeight = h;
+                }
             }
         }
-        catch
+        catch (JSException)
         {
-
         }
     }
 
     private async Task RequestDrawAsync()
     {
-        if (_isRendering)
+        if (Manager == null)
+            return;
+
+        if (!await EnsureEngineInitializedAsync() || _engineModule == null)
         {
-            _renderPending = true;
+            _redrawAfterRender = true;
             return;
         }
 
-        _isRendering = true;
+        if (_isSyncing)
+        {
+            _syncPending = true;
+            return;
+        }
 
+        _isSyncing = true;
         try
         {
             do
             {
-                await JS.InvokeVoidAsync("circuitUi.nextFrame");
-                _renderPending = false;
-                await DrawCanvasAsync();
+                _syncPending = false;
+                var payload = BuildScenePayload();
+                await _engineModule.InvokeVoidAsync("syncScene", _viewportId, payload);
             }
-            while (_renderPending);
+            while (_syncPending);
         }
         finally
         {
-            _isRendering = false;
+            _isSyncing = false;
         }
+    }
+
+    private async Task RequestSignalSyncAsync()
+    {
+        if (Manager == null)
+            return;
+
+        if (!await EnsureEngineInitializedAsync() || _engineModule == null)
+        {
+            _redrawAfterRender = true;
+            return;
+        }
+
+        if (_presentationGeometryHash == null)
+        {
+            await RequestDrawAsync();
+            return;
+        }
+
+        var delta = BuildSignalDeltaPayload();
+        await _engineModule.InvokeVoidAsync("syncSignals", _viewportId, delta);
+    }
+
+    private async Task SyncViewportOnlyAsync()
+    {
+        if (await EnsureEngineInitializedAsync() && _engineModule != null)
+        {
+            await _engineModule.InvokeVoidAsync("setViewport", _viewportId, _panX, _panY, _zoom, _isPanMode);
+        }
+        await InvokeAsync(StateHasChanged);
     }
 
     public Task RedrawAsync()
@@ -301,14 +311,17 @@
             _observedManager = Manager;
             _refreshCircuitAfterRender = false;
             await MeasureViewportAsync();
-            if (_canvasWidth < 768 && Manager.Gates.Count > 0)
+            if (!_initialMobileFitDone && _canvasWidth > 50 && _canvasWidth < 768 && Manager.Gates.Count > 0)
+            {
+                _initialMobileFitDone = true;
                 FitCircuit();
+            }
             SetStatus("Circuit updated.", false);
-            await SimulateAndRefreshAsync();
+            await SimulateAndRefreshAsync(geometryChanged: true);
         });
     }
 
-    private async Task SimulateAndRefreshAsync()
+    private async Task SimulateAndRefreshAsync(bool geometryChanged = true)
     {
         if (Manager == null)
             return;
@@ -319,10 +332,14 @@
         if (!result.IsValid)
             SetStatus("The circuit could not be evaluated. Check its connections.", true);
 
-        if (_canvasRef == null)
-            _redrawAfterRender = true;
-        else
+        if (geometryChanged || _presentationGeometryHash == null)
+        {
             await RequestDrawAsync();
+        }
+        else
+        {
+            await RequestSignalSyncAsync();
+        }
 
         await InvokeAsync(StateHasChanged);
     }
@@ -331,18 +348,8 @@
     {
         _selectedGate = null;
         _selectedWire = null;
-        _draggingGate = null;
-        _hasMovedGate = false;
-        _dragOffsetX = 0;
-        _dragOffsetY = 0;
-        _isPanning = false;
         _isPanMode = false;
-        _panStartMouseX = 0;
-        _panStartMouseY = 0;
-        _tempWireEndX = 0;
-        _tempWireEndY = 0;
-        ResetWiringState();
-        _occupiedInputs.Clear();
+        _presentationGeometryHash = null;
         _validationMessage = null;
         _isErrorStatus = false;
 
@@ -350,14 +357,19 @@
         _isEducationalMode = false;
     }
 
-    private async Task NotifyUserModificationAsync()
+    private async Task NotifyUserModificationAsync(bool geometryChanged = true)
     {
         if (Manager == null)
             return;
 
         _stepSimulator = null;
         _isEducationalMode = false;
-        await SimulateAndRefreshAsync();
+        if (geometryChanged)
+        {
+            _presentationGeometryHash = null;
+        }
+
+        await SimulateAndRefreshAsync(geometryChanged);
 
         if (OnBoardUpdated.HasDelegate)
             await OnBoardUpdated.InvokeAsync();
@@ -399,697 +411,14 @@
         return (gate.X, gate.Y + spacing * (inputIndex + 1));
     }
 
-    private static bool HasOutputPin(IGate gate)
-    {
-        return !IsGateType(gate, "LAMP");
-    }
-
-    private static bool IsGateType(IGate gate, string type)
-    {
-        return string.Equals(gate.GateType, type, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task DrawCanvasAsync()
-    {
-        if (_canvasRef == null || Manager == null)
-            return;
-
-        var gates = Manager.Gates.Where(g => g != null && g.Inputs != null).ToArray();
-        var gateSet = new HashSet<IGate>(gates, ReferenceEqualityComparer.Instance);
-        var wires = Manager.Wires.Where(w =>
-            w != null && w.SourceGate != null && w.TargetGate != null &&
-            gateSet.Contains(w.SourceGate) && gateSet.Contains(w.TargetGate) &&
-            w.TargetInputIndex >= 0 && w.TargetInputIndex < w.TargetGate.Inputs.Length).ToArray();
-
-        _occupiedInputs = new HashSet<(IGate, int)>();
-
-        if (_isDrawingTempWire)
-        {
-            foreach (var w in wires)
-            {
-                if (w.TargetGate != null)
-                    _occupiedInputs.Add((w.TargetGate, w.TargetInputIndex));
-            }
-        }
-
-        await using var context = await _canvasRef.GetContext2DAsync();
-        await using var ctx = context.CreateBatch();
-
-        await ctx.SaveAsync();
-
-        await ctx.ClearRectAsync(0, 0, _canvasWidth, _canvasHeight);
-        await ctx.FillStyleAsync("#ffffff");
-        await ctx.FillRectAsync(0, 0, _canvasWidth, _canvasHeight);
-
-        await ctx.SaveAsync();
-        await ctx.TranslateAsync(_panX, _panY);
-        await ctx.ScaleAsync(_zoom, _zoom);
-
-        await DrawGridAsync(ctx);
-
-        foreach (var wire in wires)
-            await DrawWireAsync(ctx, wire);
-
-        if (_isDrawingTempWire && _wiringSourceGate != null)
-            await DrawTemporaryWireAsync(ctx);
-
-        foreach (var gate in gates)
-            await DrawGateAsync(ctx, gate);
-
-        await ctx.RestoreAsync();
-        await ctx.RestoreAsync();
-    }
-
-    private async Task DrawGridAsync(IContext2DWithoutGetters ctx)
-    {
-        double startX = Math.Floor((-_panX / _zoom) / GridSize) * GridSize - GridSize;
-        double startY = Math.Floor((-_panY / _zoom) / GridSize) * GridSize - GridSize;
-
-        double endX = startX + _canvasWidth / _zoom + GridSize * 2;
-        double endY = startY + _canvasHeight / _zoom + GridSize * 2;
-
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync("#e2e8f0");
-        await ctx.LineWidthAsync(1 / _zoom);
-
-        for (double x = startX; x <= endX; x += GridSize)
-        {
-            await ctx.MoveToAsync(x, startY);
-            await ctx.LineToAsync(x, endY);
-        }
-
-        for (double y = startY; y <= endY; y += GridSize)
-        {
-            await ctx.MoveToAsync(startX, y);
-            await ctx.LineToAsync(endX, y);
-        }
-
-        await ctx.StrokeAsync();
-    }
-
-    private async Task DrawWireAsync(IContext2DWithoutGetters ctx, Wire wire)
-    {
-        if (wire.SourceGate == null || wire.TargetGate == null)
-            return;
-
-        var (x1, y1) = GetOutputPinPosition(wire.SourceGate);
-        var (x2, y2) = GetInputPinPosition(wire.TargetGate, wire.TargetInputIndex);
-
-        bool selected = ReferenceEquals(wire, _selectedWire);
-        bool high = wire.SourceGate.Output;
-
-        double midX = (x1 + x2) / 2;
-
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync(selected ? "#f59e0b" : high ? "#10b981" : "#64748b");
-        await ctx.LineWidthAsync(selected ? 4 : high ? 3 : 2.2);
-        await ctx.LineCapAsync(LineCap.Round);
-        await ctx.LineJoinAsync(LineJoin.Round);
-
-        await ctx.MoveToAsync(x1, y1);
-        await ctx.LineToAsync(midX, y1);
-        await ctx.LineToAsync(midX, y2);
-        await ctx.LineToAsync(x2, y2);
-        await ctx.StrokeAsync();
-    }
-
-    private async Task DrawTemporaryWireAsync(IContext2DWithoutGetters ctx)
-    {
-        if (_wiringSourceGate == null)
-            return;
-
-        var (x1, y1) = GetOutputPinPosition(_wiringSourceGate);
-
-        double x2 = _tempWireEndX;
-        double y2 = _tempWireEndY;
-
-        bool snapped = _hoverInputGate != null && _hoverInputIndex >= 0;
-
-        if (snapped)
-        {
-            var p = GetInputPinPosition(_hoverInputGate!, _hoverInputIndex);
-            x2 = p.X;
-            y2 = p.Y;
-        }
-
-        double midX = (x1 + x2) / 2;
-
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync(
-            !snapped ? "#2563eb" : _hoverInputValid ? "#16a34a" : "#ef4444");
-        await ctx.LineWidthAsync(2.5);
-        await ctx.LineCapAsync(LineCap.Round);
-        await ctx.LineJoinAsync(LineJoin.Round);
-        await ctx.SetLineDashAsync(new double[] { 7, 5 });
-
-        await ctx.MoveToAsync(x1, y1);
-        await ctx.LineToAsync(midX, y1);
-        await ctx.LineToAsync(midX, y2);
-        await ctx.LineToAsync(x2, y2);
-        await ctx.StrokeAsync();
-
-        await ctx.SetLineDashAsync(Array.Empty<double>());
-    }
-
-    private async Task DrawGateAsync(IContext2DWithoutGetters ctx, IGate gate)
-    {
-        bool selected =
-            ReferenceEquals(gate, _selectedGate) ||
-            ReferenceEquals(gate, _wiringSourceGate);
-
-        string stroke = selected ? "#2563eb" : "#1e293b";
-
-        double midY = gate.Y + GateHeight / 2;
-        string type = (gate.GateType ?? string.Empty).ToUpperInvariant();
-
-        await ctx.LineCapAsync(LineCap.Round);
-        await ctx.LineJoinAsync(LineJoin.Round);
-
-        int inputCount = gate.Inputs?.Length ?? 0;
-
-        for (int i = 0; i < inputCount; i++)
-        {
-            var (px, py) = GetInputPinPosition(gate, i);
-            double endX = GetInputLeadEndX(gate, type, py - midY);
-
-            await ctx.BeginPathAsync();
-            await ctx.StrokeStyleAsync(gate.Inputs![i] ? "#16a34a" : "#64748b");
-            await ctx.LineWidthAsync(2);
-            await ctx.MoveToAsync(px, py);
-            await ctx.LineToAsync(endX, py);
-            await ctx.StrokeAsync();
-        }
-
-        if (HasOutputPin(gate))
-        {
-            var (ox, oy) = GetOutputPinPosition(gate);
-
-            await ctx.BeginPathAsync();
-            await ctx.StrokeStyleAsync(gate.Output ? "#10b981" : "#64748b");
-            await ctx.LineWidthAsync(2);
-            await ctx.MoveToAsync(gate.X + BodyRight, oy);
-            await ctx.LineToAsync(ox, oy);
-            await ctx.StrokeAsync();
-        }
-
-        if (IsGateType(gate, "SWITCH"))
-            await DrawSwitchSymbolAsync(ctx, gate, selected);
-        else if (IsGateType(gate, "LAMP"))
-            await DrawLampSymbolAsync(ctx, gate, stroke);
-        else
-            await DrawLogicSymbolAsync(ctx, gate, type, stroke);
-
-        await ctx.FillStyleAsync(selected ? "#2563eb" : "#64748b");
-        await ctx.FontAsync("bold 11px Arial");
-        await ctx.TextAlignAsync(TextAlign.Center);
-        string label = gate.GateType ?? string.Empty;
-        if (gate is Switch && gate.Id.StartsWith("input_", StringComparison.Ordinal))
-            label = gate.Id[6..];
-        else if (gate is Lamp && gate.Id.StartsWith("output_", StringComparison.Ordinal))
-            label = gate.Id[7..];
-        if (label.Length > 18)
-            label = label[..15] + "...";
-        await ctx.FillTextAsync(label,
-            gate.X + GateWidth / 2, gate.Y + GateHeight - 1);
-
-        for (int i = 0; i < inputCount; i++)
-        {
-            var (px, py) = GetInputPinPosition(gate, i);
-
-            bool hovered = ReferenceEquals(gate, _hoverInputGate) && i == _hoverInputIndex;
-
-            bool candidate = _isDrawingTempWire
-                             && !ReferenceEquals(gate, _wiringSourceGate)
-                             && !_occupiedInputs.Contains((gate, i));
-
-            await DrawPinAsync(ctx, px, py, gate.Inputs![i], hovered, _hoverInputValid, candidate);
-        }
-
-        if (HasOutputPin(gate))
-        {
-            var (ox, oy) = GetOutputPinPosition(gate);
-            await DrawPinAsync(ctx, ox, oy, gate.Output, false, true, false);
-        }
-    }
-
-    private async Task DrawPinAsync(
-        IContext2DWithoutGetters ctx,
-        double x,
-        double y,
-        bool value,
-        bool hovered,
-        bool valid,
-        bool candidate)
-    {
-        if (hovered)
-        {
-            await ctx.BeginPathAsync();
-            await ctx.FillStyleAsync(valid ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)");
-            await ctx.StrokeStyleAsync(valid ? "#16a34a" : "#dc2626");
-            await ctx.LineWidthAsync(2);
-            await ctx.ArcAsync(x, y, 10, 0, Math.PI * 2);
-            await ctx.FillAsync(FillRule.NonZero);
-            await ctx.StrokeAsync();
-        }
-        else if (candidate)
-        {
-            await ctx.BeginPathAsync();
-            await ctx.StrokeStyleAsync("#93c5fd");
-            await ctx.LineWidthAsync(1.5);
-            await ctx.ArcAsync(x, y, 7, 0, Math.PI * 2);
-            await ctx.StrokeAsync();
-        }
-
-        await ctx.BeginPathAsync();
-        await ctx.FillStyleAsync(value ? "#16a34a" : "#64748b");
-        await ctx.StrokeStyleAsync("#ffffff");
-        await ctx.LineWidthAsync(1.5);
-        await ctx.ArcAsync(x, y, PinDotRadius, 0, Math.PI * 2);
-        await ctx.FillAsync(FillRule.NonZero);
-        await ctx.StrokeAsync();
-    }
-
-    private static double GetInputLeadEndX(IGate gate, string type, double dy)
-    {
-        double x0 = gate.X + BodyLeft;
-
-        switch (type)
-        {
-            case "OR":
-            case "NOR":
-                return x0 + OrIndent(dy);
-
-            case "XOR":
-            case "XNOR":
-                return x0 - 6 + OrIndent(dy);
-
-            default:
-                return x0;
-        }
-    }
-
-    private static double OrIndent(double dy)
-    {
-        double half = BodyHeight / 2;
-        double r = Math.Abs(dy) / half;
-
-        if (r >= 1)
-            return 0;
-
-        return 0.75 * OrCurve * (1 - r * r);
-    }
-
-    private async Task DrawLogicSymbolAsync(
-        IContext2DWithoutGetters ctx,
-        IGate gate,
-        string type,
-        string stroke)
-    {
-        double mid = gate.Y + GateHeight / 2;
-        double top = mid - BodyHeight / 2;
-        double bottom = mid + BodyHeight / 2;
-        double h = BodyHeight;
-
-        bool inverted = type is "NAND" or "NOR" or "NOT" or "XNOR";
-
-        double x0 = gate.X + BodyLeft;
-        double tipX = gate.X + BodyRight - (inverted ? BubbleRadius * 2 : 0);
-        double w = tipX - x0;
-
-        await ctx.StrokeStyleAsync(stroke);
-        await ctx.LineWidthAsync(2);
-
-        switch (type)
-        {
-            case "AND":
-            case "NAND":
-                {
-                    double r = h / 2;
-
-                    await ctx.BeginPathAsync();
-                    await ctx.MoveToAsync(x0, top);
-                    await ctx.LineToAsync(tipX - r, top);
-                    await ctx.ArcAsync(tipX - r, mid, r, -Math.PI / 2, Math.PI / 2);
-                    await ctx.LineToAsync(x0, bottom);
-                    await ctx.ClosePathAsync();
-                    await ctx.StrokeAsync();
-                    break;
-                }
-
-            case "OR":
-            case "NOR":
-            case "XOR":
-            case "XNOR":
-                {
-                    await ctx.BeginPathAsync();
-                    await ctx.MoveToAsync(x0, top);
-                    await ctx.BezierCurveToAsync(
-                        x0 + w * 0.5, top,
-                        tipX - w * 0.15, mid - h * 0.35,
-                        tipX, mid);
-                    await ctx.BezierCurveToAsync(
-                        tipX - w * 0.15, mid + h * 0.35,
-                        x0 + w * 0.5, bottom,
-                        x0, bottom);
-                    await ctx.BezierCurveToAsync(
-                        x0 + OrCurve, bottom - h / 3,
-                        x0 + OrCurve, top + h / 3,
-                        x0, top);
-                    await ctx.StrokeAsync();
-
-                    if (type is "XOR" or "XNOR")
-                    {
-                        await ctx.BeginPathAsync();
-                        await ctx.MoveToAsync(x0 - 6, bottom);
-                        await ctx.BezierCurveToAsync(
-                            x0 - 6 + OrCurve, bottom - h / 3,
-                            x0 - 6 + OrCurve, top + h / 3,
-                            x0 - 6, top);
-                        await ctx.StrokeAsync();
-                    }
-
-                    break;
-                }
-
-            case "NOT":
-            case "BUF":
-            case "BUFFER":
-                {
-                    await ctx.BeginPathAsync();
-                    await ctx.MoveToAsync(x0, top);
-                    await ctx.LineToAsync(tipX, mid);
-                    await ctx.LineToAsync(x0, bottom);
-                    await ctx.ClosePathAsync();
-                    await ctx.StrokeAsync();
-                    break;
-                }
-
-            default:
-                {
-
-                    await ctx.FillStyleAsync(stroke);
-                    await ctx.FontAsync("bold 12px Arial");
-                    await ctx.TextAlignAsync(TextAlign.Center);
-                    await ctx.FillTextAsync(type, (x0 + gate.X + BodyRight) / 2, mid + 4);
-                    break;
-                }
-        }
-
-        if (inverted)
-            await DrawInversionBubbleAsync(ctx, tipX + BubbleRadius, mid, stroke);
-    }
-
-    private async Task DrawInversionBubbleAsync(IContext2DWithoutGetters ctx, double x, double y, string stroke)
-    {
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync(stroke);
-        await ctx.LineWidthAsync(2);
-        await ctx.ArcAsync(x, y, BubbleRadius, 0, Math.PI * 2);
-        await ctx.StrokeAsync();
-    }
-
-    private async Task DrawSwitchSymbolAsync(IContext2DWithoutGetters ctx, IGate gate, bool selected)
-    {
-        double cx = gate.X + 50;
-        double cy = gate.Y + GateHeight / 2;
-        bool on = gate.Output;
-
-        const double trackHalf = 11;
-        const double trackThickness = 22;
-
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync(on ? "#16a34a" : "#94a3b8");
-        await ctx.LineWidthAsync(trackThickness);
-        await ctx.MoveToAsync(cx - trackHalf, cy);
-        await ctx.LineToAsync(cx + trackHalf, cy);
-        await ctx.StrokeAsync();
-
-        if (selected)
-        {
-            await ctx.BeginPathAsync();
-            await ctx.StrokeStyleAsync("#2563eb");
-            await ctx.LineWidthAsync(2);
-            await ctx.ArcAsync(cx - trackHalf, cy, trackThickness / 2 + 3, Math.PI / 2, Math.PI * 1.5);
-            await ctx.LineToAsync(cx + trackHalf, cy - trackThickness / 2 - 3);
-            await ctx.ArcAsync(cx + trackHalf, cy, trackThickness / 2 + 3, -Math.PI / 2, Math.PI / 2);
-            await ctx.ClosePathAsync();
-            await ctx.StrokeAsync();
-        }
-
-        double knobX = on ? cx + trackHalf : cx - trackHalf;
-
-        await ctx.BeginPathAsync();
-        await ctx.FillStyleAsync("#ffffff");
-        await ctx.StrokeStyleAsync(on ? "#15803d" : "#64748b");
-        await ctx.LineWidthAsync(1.5);
-        await ctx.ArcAsync(knobX, cy, 8, 0, Math.PI * 2);
-        await ctx.FillAsync(FillRule.NonZero);
-        await ctx.StrokeAsync();
-
-        await ctx.FillStyleAsync("#ffffff");
-        await ctx.FontAsync("bold 11px Arial");
-        await ctx.TextAlignAsync(TextAlign.Center);
-        await ctx.FillTextAsync(on ? "1" : "0",
-            on ? cx - trackHalf : cx + trackHalf, cy + 4);
-
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync(on ? "#10b981" : "#64748b");
-        await ctx.LineWidthAsync(2);
-        await ctx.MoveToAsync(cx + trackHalf + trackThickness / 2, cy);
-        await ctx.LineToAsync(gate.X + BodyRight, cy);
-        await ctx.StrokeAsync();
-    }
-
-    private async Task DrawLampSymbolAsync(IContext2DWithoutGetters ctx, IGate gate, string stroke)
-    {
-        double cx = gate.X + 58;
-        double cy = gate.Y + GateHeight / 2;
-        const double radius = 14;
-        bool on = gate.Output;
-
-        int inputCount = gate.Inputs?.Length ?? 0;
-
-        for (int i = 0; i < inputCount; i++)
-        {
-            var (px, py) = GetInputPinPosition(gate, i);
-            double dy = py - cy;
-
-            if (Math.Abs(dy) >= radius)
-                continue;
-
-            double edgeX = cx - Math.Sqrt(radius * radius - dy * dy);
-
-            await ctx.BeginPathAsync();
-            await ctx.StrokeStyleAsync(gate.Inputs![i] ? "#16a34a" : "#64748b");
-            await ctx.LineWidthAsync(2);
-            await ctx.MoveToAsync(gate.X + BodyLeft, py);
-            await ctx.LineToAsync(edgeX, py);
-            await ctx.StrokeAsync();
-        }
-
-        if (on)
-        {
-            double[] glowRadii = { 30, 24, 19 };
-            string[] glowColors =
-            {
-                "rgba(251,191,36,0.12)",
-                "rgba(251,191,36,0.20)",
-                "rgba(251,191,36,0.32)"
-            };
-
-            for (int i = 0; i < glowRadii.Length; i++)
-            {
-                await ctx.BeginPathAsync();
-                await ctx.FillStyleAsync(glowColors[i]);
-                await ctx.ArcAsync(cx, cy, glowRadii[i], 0, Math.PI * 2);
-                await ctx.FillAsync(FillRule.NonZero);
-            }
-        }
-
-        await ctx.BeginPathAsync();
-        await ctx.FillStyleAsync(on ? "#fde047" : "#f1f5f9");
-        await ctx.StrokeStyleAsync(on ? "#d97706" : stroke);
-        await ctx.LineWidthAsync(2);
-        await ctx.ArcAsync(cx, cy, radius, 0, Math.PI * 2);
-        await ctx.FillAsync(FillRule.NonZero);
-        await ctx.StrokeAsync();
-
-        double d = radius * 0.62;
-
-        await ctx.BeginPathAsync();
-        await ctx.StrokeStyleAsync(on ? "#b45309" : "#94a3b8");
-        await ctx.LineWidthAsync(1.8);
-        await ctx.MoveToAsync(cx - d, cy - d);
-        await ctx.LineToAsync(cx + d, cy + d);
-        await ctx.MoveToAsync(cx + d, cy - d);
-        await ctx.LineToAsync(cx - d, cy + d);
-        await ctx.StrokeAsync();
-    }
-
-    private async Task HandleMouseDownAsync(MouseEventArgs e)
-    {
-        if (Manager == null)
-            return;
-
-        var (cx, cy) = ScreenToCircuit(e.OffsetX, e.OffsetY);
-
-        if (_isPanMode || e.Button == 1)
-        {
-            _isPanning = true;
-            _panStartMouseX = e.OffsetX - _panX;
-            _panStartMouseY = e.OffsetY - _panY;
-            return;
-        }
-
-        if (e.Button == 2)
-        {
-            if (TryFindInputPinAt(cx, cy, out var pinGate, out int pinIndex) && pinGate != null)
-            {
-                var connected = Manager.Wires.FirstOrDefault(w =>
-                    ReferenceEquals(w.TargetGate, pinGate) &&
-                    w.TargetInputIndex == pinIndex);
-
-                if (connected != null)
-                {
-                    RemoveWireSafely(connected);
-                    _selectedWire = null;
-
-                    SetStatus($"Disconnected the wire from input {pinIndex}.", false);
-                    await NotifyUserModificationAsync();
-                    return;
-                }
-            }
-
-            var gateToDelete = FindGateAt(cx, cy);
-
-            if (gateToDelete != null)
-            {
-                string type = gateToDelete.GateType;
-                RemoveGateSafely(gateToDelete);
-
-                SetStatus($"Deleted gate {type}.", false);
-                await NotifyUserModificationAsync();
-                return;
-            }
-
-            var wireToDelete = FindWireAt(cx, cy);
-
-            if (wireToDelete != null)
-            {
-                RemoveWireSafely(wireToDelete);
-                _selectedWire = null;
-
-                SetStatus("Wire deleted.", false);
-                await NotifyUserModificationAsync();
-            }
-
-            return;
-        }
-
-        _validationMessage = null;
-
-        if (TryFindOutputPinAt(cx, cy, out var source) && source != null)
-        {
-            _wiringSourceGate = source;
-            _isDrawingTempWire = true;
-            _tempWireEndX = cx;
-            _tempWireEndY = cy;
-
-            _hoverInputGate = null;
-            _hoverInputIndex = -1;
-            _hoverInputValid = false;
-
-            _selectedGate = source;
-            _selectedWire = null;
-
-            SetStatus($"Connecting from {source.GateType}. Drag to a target input pin.", false);
-
-            await RefreshAsync();
-            return;
-        }
-
-        var clickedGate = FindGateAt(cx, cy);
-
-        if (clickedGate != null)
-        {
-            _selectedGate = clickedGate;
-            _selectedWire = null;
-
-            _draggingGate = clickedGate;
-            _hasMovedGate = false;
-
-            _dragOffsetX = cx - clickedGate.X;
-            _dragOffsetY = cy - clickedGate.Y;
-
-            await RequestDrawAsync();
-            return;
-        }
-
-        var clickedWire = FindWireAt(cx, cy);
-
-        if (clickedWire != null)
-        {
-            _selectedWire = clickedWire;
-            _selectedGate = null;
-
-            SetStatus("Wire selected. Use Delete selected to remove it.", false);
-            await RefreshAsync();
-            return;
-        }
-
-        _selectedGate = null;
-        _selectedWire = null;
-
-        _isPanning = true;
-        _panStartMouseX = e.OffsetX - _panX;
-        _panStartMouseY = e.OffsetY - _panY;
-
-        await RefreshAsync();
-    }
-
-    private async Task<MouseEventArgs> GetTouchPositionAsync(TouchPoint point)
-    {
-        var position = await JS.InvokeAsync<double[]>("circuitUi.getPointerPosition", _viewportId, point.ClientX, point.ClientY);
-        return new MouseEventArgs { OffsetX = position[0], OffsetY = position[1], Button = 0, Buttons = 1 };
-    }
-
-    private async Task HandleTouchStartAsync(TouchEventArgs e)
-    {
-        if (e.Touches.Length != 1) return;
-        _isTouchInput = true;
-        _touchActive = true;
-        await HandleMouseDownAsync(await GetTouchPositionAsync(e.Touches[0]));
-    }
-
-    private async Task HandleTouchMoveAsync(TouchEventArgs e)
-    {
-        if (_touchActive && e.Touches.Length == 1)
-            await HandleMouseMoveAsync(await GetTouchPositionAsync(e.Touches[0]));
-    }
-
-    private async Task HandleTouchEndAsync(TouchEventArgs e)
-    {
-        if (_touchActive && e.ChangedTouches.Length > 0)
-            await HandleMouseUpAsync(await GetTouchPositionAsync(e.ChangedTouches[0]));
-        _touchActive = false;
-        _isTouchInput = false;
-    }
-
-    private async Task HandleTouchCancelAsync(TouchEventArgs e)
-    {
-        _touchActive = false;
-        _isTouchInput = false;
-        await HandleMouseLeaveAsync(new MouseEventArgs());
-    }
-
     private void FitCircuit()
     {
-        if (Manager.Gates.Count == 0) return;
+        if (Manager.Gates.Count == 0 || _canvasWidth <= 100 || _canvasHeight <= 100) return;
         double left = Manager.Gates.Min(gate => gate.X) - 25;
         double top = Manager.Gates.Min(gate => gate.Y) - 25;
-        double width = Manager.Gates.Max(gate => gate.X) + GateWidth + 25 - left;
-        double height = Manager.Gates.Max(gate => gate.Y) + GateHeight + 25 - top;
-        _zoom = Math.Clamp(Math.Min((_canvasWidth - 30) / width, (_canvasHeight - 30) / height), 0.2, 1.5);
+        double width = Math.Max(GateWidth + 50, Manager.Gates.Max(gate => gate.X) + GateWidth + 25 - left);
+        double height = Math.Max(GateHeight + 50, Manager.Gates.Max(gate => gate.Y) + GateHeight + 25 - top);
+        _zoom = Math.Clamp(Math.Min((_canvasWidth - 40) / width, (_canvasHeight - 40) / height), 0.2, 1.5);
         _panX = (_canvasWidth - width * _zoom) / 2 - left * _zoom;
         _panY = (_canvasHeight - height * _zoom) / 2 - top * _zoom;
     }
@@ -1098,205 +427,18 @@
     {
         await MeasureViewportAsync();
         FitCircuit();
-        await RequestDrawAsync();
-    }
-
-    private async Task HandleMouseMoveAsync(MouseEventArgs e)
-    {
-        if (Manager == null)
-            return;
-
-        if (_isPanning)
-        {
-            _panX = e.OffsetX - _panStartMouseX;
-            _panY = e.OffsetY - _panStartMouseY;
-
-            await RequestDrawAsync();
-            return;
-        }
-
-        var (cx, cy) = ScreenToCircuit(e.OffsetX, e.OffsetY);
-
-        if (_isDrawingTempWire && _wiringSourceGate != null)
-        {
-            _tempWireEndX = cx;
-            _tempWireEndY = cy;
-
-            UpdateInputSnap(cx, cy);
-
-            await RequestDrawAsync();
-            return;
-        }
-
-        if (_draggingGate != null)
-        {
-            double newX = cx - _dragOffsetX;
-            double newY = cy - _dragOffsetY;
-
-            if (Math.Abs(newX - _draggingGate.X) > 1 ||
-                Math.Abs(newY - _draggingGate.Y) > 1)
-            {
-                _hasMovedGate = true;
-            }
-
-            _draggingGate.X = newX;
-            _draggingGate.Y = newY;
-
-            await RequestDrawAsync();
-        }
-    }
-
-    private void UpdateInputSnap(double x, double y)
-    {
-        if (_wiringSourceGate == null)
-            return;
-
-        double snapRadius = (_isTouchInput ? 24 : SnapRadiusPx) / _zoom;
-        double best = snapRadius;
-
-        IGate? bestGate = null;
-        int bestIndex = -1;
-
-        foreach (var gate in Manager.Gates)
-        {
-            int count = gate.Inputs?.Length ?? 0;
-
-            for (int i = 0; i < count; i++)
-            {
-                var (px, py) = GetInputPinPosition(gate, i);
-                double distance = Distance(x, y, px, py);
-
-                if (distance <= best)
-                {
-                    best = distance;
-                    bestGate = gate;
-                    bestIndex = i;
-                }
-            }
-        }
-
-        if (ReferenceEquals(bestGate, _hoverInputGate) && bestIndex == _hoverInputIndex)
-            return;
-
-        _hoverInputGate = bestGate;
-        _hoverInputIndex = bestIndex;
-        _hoverInputValid = false;
-
-        if (bestGate == null)
-            return;
-
-        if (ReferenceEquals(bestGate, _wiringSourceGate) || IsInputOccupied(bestGate, bestIndex))
-            return;
-
-        var result = CircuitValidator.CanConnect(
-            Manager,
-            _wiringSourceGate,
-            bestGate,
-            bestIndex);
-
-        _hoverInputValid = result.IsValid;
+        await SyncViewportOnlyAsync();
     }
 
     private bool IsInputOccupied(IGate gate, int index)
     {
-        return Manager.Wires.Any(w =>
-            ReferenceEquals(w.TargetGate, gate) &&
-            w.TargetInputIndex == index);
-    }
-
-    private async Task HandleMouseUpAsync(MouseEventArgs e)
-    {
-        if (Manager == null)
-            return;
-
-        if (_isPanning)
+        for (int i = 0; i < Manager.Wires.Count; i++)
         {
-            _isPanning = false;
-            await RefreshAsync();
-            return;
+            var w = Manager.Wires[i];
+            if (ReferenceEquals(w.TargetGate, gate) && w.TargetInputIndex == index)
+                return true;
         }
-
-        if (_isDrawingTempWire && _wiringSourceGate != null)
-        {
-            var (cx, cy) = ScreenToCircuit(e.OffsetX, e.OffsetY);
-
-            UpdateInputSnap(cx, cy);
-
-            if (_hoverInputGate != null && _hoverInputIndex >= 0)
-            {
-                await CompleteWireConnectionAsync(
-                    _wiringSourceGate,
-                    _hoverInputGate,
-                    _hoverInputIndex);
-
-                return;
-            }
-
-            ResetWiringState();
-
-            SetStatus("No connection was made. Drag to a valid input pin.", false);
-            await RefreshAsync();
-            return;
-        }
-
-        if (_draggingGate != null)
-        {
-            var gate = _draggingGate;
-            _draggingGate = null;
-
-            if (_hasMovedGate)
-            {
-                gate.X = SnapToGrid(gate.X);
-                gate.Y = SnapToGrid(gate.Y);
-
-                SetStatus($"Moved {gate.GateType} to ({gate.X:0}, {gate.Y:0}).", false);
-                await NotifyUserModificationAsync();
-            }
-            else if (gate is Switch sw)
-            {
-                sw.Toggle();
-
-                SetStatus($"Switch changed to {(sw.State ? "ON (1)" : "OFF (0)")}.", false);
-                await NotifyUserModificationAsync();
-            }
-            else
-            {
-                await RefreshAsync();
-            }
-        }
-    }
-
-    private async Task HandleMouseLeaveAsync(MouseEventArgs e)
-    {
-        _isPanning = false;
-
-        if (_isDrawingTempWire)
-            ResetWiringState();
-
-        if (_draggingGate != null)
-        {
-            var gate = _draggingGate;
-            _draggingGate = null;
-
-            if (_hasMovedGate)
-            {
-                gate.X = SnapToGrid(gate.X);
-                gate.Y = SnapToGrid(gate.Y);
-                await NotifyUserModificationAsync();
-                return;
-            }
-        }
-
-        await RefreshAsync();
-    }
-
-    private void ResetWiringState()
-    {
-        _isDrawingTempWire = false;
-        _wiringSourceGate = null;
-        _hoverInputGate = null;
-        _hoverInputIndex = -1;
-        _hoverInputValid = false;
+        return false;
     }
 
     private async Task CompleteWireConnectionAsync(
@@ -1304,7 +446,6 @@
         IGate target,
         int targetInputIndex)
     {
-
         var validation = Manager.TryAddWire(new Wire(source, target, targetInputIndex));
 
         if (!validation.IsValid)
@@ -1315,19 +456,17 @@
         }
 
         _validationMessage = null;
-        ResetWiringState();
 
         SetStatus(
             $"Connected: {source.GateType} → {target.GateType} (In{targetInputIndex}).",
             false);
 
-        await NotifyUserModificationAsync();
+        await NotifyUserModificationAsync(geometryChanged: true);
     }
 
     private void RejectConnection(string message)
     {
         _validationMessage = message;
-        ResetWiringState();
         SetStatus(message, true);
     }
 
@@ -1346,189 +485,56 @@
 
     private void RemoveGateSafely(IGate gate)
     {
-        var affected = Manager.Wires
-            .Where(w => ReferenceEquals(w.SourceGate, gate)
-                        && w.TargetGate != null
-                        && !ReferenceEquals(w.TargetGate, gate))
-            .Select(w => (Gate: w.TargetGate, Index: w.TargetInputIndex))
-            .ToList();
+        var affected = new List<(IGate Gate, int Index)>();
+        for (int i = 0; i < Manager.Wires.Count; i++)
+        {
+            var w = Manager.Wires[i];
+            if (ReferenceEquals(w.SourceGate, gate) && w.TargetGate != null && !ReferenceEquals(w.TargetGate, gate))
+            {
+                affected.Add((w.TargetGate, w.TargetInputIndex));
+            }
+        }
 
         Manager.RemoveGate(gate);
 
-        foreach (var item in affected)
-            ResetInputIfFree(item.Gate, item.Index);
+        for (int i = 0; i < affected.Count; i++)
+        {
+            ResetInputIfFree(affected[i].Gate, affected[i].Index);
+        }
 
         if (ReferenceEquals(_selectedGate, gate))
             _selectedGate = null;
-
-        if (ReferenceEquals(_draggingGate, gate))
-            _draggingGate = null;
-
-        if (ReferenceEquals(_wiringSourceGate, gate) || ReferenceEquals(_hoverInputGate, gate))
-            ResetWiringState();
     }
 
     private void ResetInputIfFree(IGate? gate, int index)
     {
-        if (gate == null || index < 0)
+        if (gate == null || index < 0 || IsInputOccupied(gate, index))
             return;
 
-        if (IsInputOccupied(gate, index))
-            return;
-
-        try
-        {
-            if (gate.Inputs != null && index < gate.Inputs.Length)
-                gate.Inputs[index] = false;
-        }
-        catch
-        {
-
-        }
-    }
-
-    private IGate? FindGateAt(double x, double y)
-    {
-        for (int i = Manager.Gates.Count - 1; i >= 0; i--)
-        {
-            var gate = Manager.Gates[i];
-
-            if (x >= gate.X &&
-                x <= gate.X + GateWidth &&
-                y >= gate.Y &&
-                y <= gate.Y + GateHeight)
-            {
-                return gate;
-            }
-        }
-
-        return null;
-    }
-
-    private bool TryFindOutputPinAt(double x, double y, out IGate? foundGate)
-    {
-        double hitRadius = (_isTouchInput ? 16 : PinPickRadiusPx) / _zoom;
-
-        foreach (var gate in Manager.Gates)
-        {
-            if (!HasOutputPin(gate))
-                continue;
-
-            var (px, py) = GetOutputPinPosition(gate);
-
-            if (Distance(x, y, px, py) <= hitRadius)
-            {
-                foundGate = gate;
-                return true;
-            }
-        }
-
-        foundGate = null;
-        return false;
-    }
-
-    private bool TryFindInputPinAt(double x, double y, out IGate? foundGate, out int inputIndex)
-    {
-        double hitRadius = (_isTouchInput ? 16 : PinPickRadiusPx) / _zoom;
-
-        foreach (var gate in Manager.Gates)
-        {
-            int count = gate.Inputs?.Length ?? 0;
-
-            for (int i = 0; i < count; i++)
-            {
-                var (px, py) = GetInputPinPosition(gate, i);
-
-                if (Distance(x, y, px, py) <= hitRadius)
-                {
-                    foundGate = gate;
-                    inputIndex = i;
-                    return true;
-                }
-            }
-        }
-
-        foundGate = null;
-        inputIndex = -1;
-        return false;
-    }
-
-    private Wire? FindWireAt(double x, double y)
-    {
-        double tolerance = 8 / _zoom;
-
-        foreach (var wire in Manager.Wires)
-        {
-            if (wire.SourceGate == null || wire.TargetGate == null)
-                continue;
-
-            var (x1, y1) = GetOutputPinPosition(wire.SourceGate);
-            var (x2, y2) = GetInputPinPosition(wire.TargetGate, wire.TargetInputIndex);
-
-            double midX = (x1 + x2) / 2;
-
-            if (DistanceToSegment(x, y, x1, y1, midX, y1) <= tolerance ||
-                DistanceToSegment(x, y, midX, y1, midX, y2) <= tolerance ||
-                DistanceToSegment(x, y, midX, y2, x2, y2) <= tolerance)
-            {
-                return wire;
-            }
-        }
-
-        return null;
-    }
-
-    private static double Distance(double x1, double y1, double x2, double y2)
-    {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-
-        return Math.Sqrt(dx * dx + dy * dy);
-    }
-
-    private static double DistanceToSegment(
-        double px, double py,
-        double x1, double y1,
-        double x2, double y2)
-    {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-
-        if (dx == 0 && dy == 0)
-            return Distance(px, py, x1, y1);
-
-        double t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-        t = Math.Clamp(t, 0, 1);
-
-        return Distance(px, py, x1 + t * dx, y1 + t * dy);
+        if (gate.Inputs != null && index < gate.Inputs.Length)
+            gate.Inputs[index] = false;
     }
 
     private void ZoomAt(double screenX, double screenY, double factor)
     {
         var (cx, cy) = ScreenToCircuit(screenX, screenY);
 
-        _zoom = Math.Clamp(_zoom * factor, 0.4, 2.5);
+        _zoom = Math.Clamp(_zoom * factor, 0.2, 2.5);
 
         _panX = screenX - cx * _zoom;
         _panY = screenY - cy * _zoom;
     }
 
-    private async Task HandleWheelAsync(WheelEventArgs e)
-    {
-        ZoomAt(e.OffsetX, e.OffsetY, e.DeltaY < 0 ? 1.12 : 1 / 1.12);
-        await RefreshAsync();
-    }
-
     private async Task ZoomInAsync()
     {
         ZoomAt(_canvasWidth / 2.0, _canvasHeight / 2.0, 1.15);
-        await RefreshAsync();
+        await SyncViewportOnlyAsync();
     }
 
     private async Task ZoomOutAsync()
     {
         ZoomAt(_canvasWidth / 2.0, _canvasHeight / 2.0, 1 / 1.15);
-        await RefreshAsync();
+        await SyncViewportOnlyAsync();
     }
 
     private async Task ResetViewAsync()
@@ -1537,16 +543,18 @@
         _panX = 0;
         _panY = 0;
 
-        await RefreshAsync();
+        await SyncViewportOnlyAsync();
     }
 
-    private void TogglePanMode()
+    private async Task TogglePanModeAsync()
     {
         _isPanMode = !_isPanMode;
 
         SetStatus(
             _isPanMode ? "Pan mode enabled." : "Pan mode disabled.",
             false);
+
+        await SyncViewportOnlyAsync();
     }
 
     private async Task DeleteSelectedAsync()
@@ -1558,9 +566,10 @@
         {
             RemoveWireSafely(_selectedWire);
             _selectedWire = null;
+            _presentationGeometryHash = null;
 
             SetStatus("Selected wire deleted.", false);
-            await NotifyUserModificationAsync();
+            await NotifyUserModificationAsync(geometryChanged: true);
             return;
         }
 
@@ -1570,9 +579,10 @@
 
             RemoveGateSafely(_selectedGate);
             _selectedGate = null;
+            _presentationGeometryHash = null;
 
             SetStatus($"Deleted {type} and its attached wires.", false);
-            await NotifyUserModificationAsync();
+            await NotifyUserModificationAsync(geometryChanged: true);
         }
     }
 
@@ -1587,7 +597,7 @@
 
         SetStatus("All gates and wires cleared.", false);
 
-        await NotifyUserModificationAsync();
+        await NotifyUserModificationAsync(geometryChanged: true);
     }
 
     private async Task StartEducationalModeAsync()
@@ -1601,7 +611,8 @@
 
         SetStatus("Step mode started. Use Next step to continue.", false);
 
-        await RefreshAsync();
+        await RequestSignalSyncAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ExecuteNextStepAsync()
@@ -1614,7 +625,8 @@
 
         SetStatus(_stepSimulator.LastActionDescription, Manager.HasFeedbackLoop);
 
-        await RefreshAsync();
+        await RequestSignalSyncAsync();
+        await InvokeAsync(StateHasChanged);
 
         if (OnBoardUpdated.HasDelegate)
             await OnBoardUpdated.InvokeAsync();
@@ -1630,7 +642,8 @@
 
         SetStatus("Simulation steps reset.", false);
 
-        await RefreshAsync();
+        await RequestSignalSyncAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ExitEducationalModeAsync()
@@ -1640,7 +653,7 @@
 
         SetStatus("Full simulation resumed.", false);
 
-        await NotifyUserModificationAsync();
+        await NotifyUserModificationAsync(geometryChanged: false);
     }
 
     private void SetStatus(string message, bool isError)
@@ -1651,26 +664,12 @@
 
     private string GetStatusCssClass()
     {
-        if (_isErrorStatus || (Manager?.HasFeedbackLoop ?? false))
+        if (_isErrorStatus || !string.IsNullOrWhiteSpace(_engineInitError) || (Manager?.HasFeedbackLoop ?? false))
             return "status-error";
 
         if (_isEducationalMode)
             return "status-edu";
 
         return "status-normal";
-    }
-
-    private string GetCursorStyle()
-    {
-        if (_isPanning || _isPanMode)
-            return "grabbing";
-
-        if (_isDrawingTempWire)
-            return "crosshair";
-
-        if (_draggingGate != null)
-            return "move";
-
-        return "default";
     }
 }
